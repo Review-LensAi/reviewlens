@@ -121,11 +121,31 @@ impl InMemoryVectorStore {
 }
 
 /// Indexes all files under `path` and populates an `InMemoryVectorStore`.
-pub async fn index_repository(path: &str, force: bool) -> Result<InMemoryVectorStore> {
-    log::info!("Indexing repository at {} (force={})", path, force);
+///
+/// If `force` is `false` and an index already exists at `output`, the existing
+/// index is loaded from disk instead of re-indexing the repository. When a new
+/// index is built, it is persisted to the given `output` path.
+pub async fn index_repository<P, Q>(path: P, output: Q, force: bool) -> Result<InMemoryVectorStore>
+where
+    P: AsRef<Path>,
+    Q: AsRef<Path>,
+{
+    let path_ref = path.as_ref();
+    let output_ref = output.as_ref();
+    log::info!(
+        "Indexing repository at {} (force={})",
+        path_ref.display(),
+        force
+    );
+
+    if !force && output_ref.exists() {
+        log::info!("Loading existing index from {}", output_ref.display());
+        return InMemoryVectorStore::load_from_disk(output_ref);
+    }
+
     let mut store = InMemoryVectorStore::default();
 
-    for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(path_ref).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let content = fs::read_to_string(entry.path())?;
             let embedding: Vec<f32> = content.bytes().map(|b| b as f32).collect();
@@ -133,6 +153,13 @@ pub async fn index_repository(path: &str, force: bool) -> Result<InMemoryVectorS
         }
     }
 
+    if let Some(parent) = output_ref.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+
+    store.save_to_disk(output_ref)?;
     log::info!("Indexed {} files", store.len());
     Ok(store)
 }

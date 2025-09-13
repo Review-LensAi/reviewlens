@@ -11,7 +11,8 @@ use async_trait::async_trait;
 /// Represents a response from an LLM.
 pub struct LlmResponse {
     pub content: String,
-    // Could also include metadata like token usage, finish reason, etc.
+    /// Number of tokens consumed to generate this response.
+    pub token_usage: u32,
 }
 
 /// A trait for interacting with an LLM provider.
@@ -38,9 +39,10 @@ impl LlmProvider for NullProvider {
         log::info!("--- LLM Call (Null Provider) ---");
         log::debug!("Prompt: {}", prompt);
         log::info!("--- End LLM Call ---");
-
+        let tokens = prompt.split_whitespace().count() as u32;
         Ok(LlmResponse {
             content: "This is a dummy response from the null provider.".to_string(),
+            token_usage: tokens,
         })
     }
 }
@@ -58,11 +60,10 @@ pub fn create_llm_provider(config: &Config) -> Result<Box<dyn LlmProvider>> {
                 .api_key
                 .clone()
                 .ok_or_else(|| EngineError::Config("Missing OpenAI api_key".into()))?;
-            let model = config
-                .llm
-                .model
-                .clone()
-                .ok_or_else(|| EngineError::Config("Missing model for OpenAI provider".into()))?;
+            let model =
+                config.llm.model.clone().ok_or_else(|| {
+                    EngineError::Config("Missing model for OpenAI provider".into())
+                })?;
             let temperature = config.generation.temperature.unwrap_or(0.1);
             Ok(Box::new(openai::OpenAiProvider::new(
                 api_key,
@@ -77,13 +78,9 @@ pub fn create_llm_provider(config: &Config) -> Result<Box<dyn LlmProvider>> {
                 .api_key
                 .clone()
                 .ok_or_else(|| EngineError::Config("Missing Anthropic api_key".into()))?;
-            let model = config
-                .llm
-                .model
-                .clone()
-                .ok_or_else(|| {
-                    EngineError::Config("Missing model for Anthropic provider".into())
-                })?;
+            let model = config.llm.model.clone().ok_or_else(|| {
+                EngineError::Config("Missing model for Anthropic provider".into())
+            })?;
             let temperature = config.generation.temperature.unwrap_or(0.1);
             Ok(Box::new(anthropic::AnthropicProvider::new(
                 api_key,
@@ -98,11 +95,10 @@ pub fn create_llm_provider(config: &Config) -> Result<Box<dyn LlmProvider>> {
                 .api_key
                 .clone()
                 .ok_or_else(|| EngineError::Config("Missing DeepSeek api_key".into()))?;
-            let model = config
-                .llm
-                .model
-                .clone()
-                .ok_or_else(|| EngineError::Config("Missing model for DeepSeek provider".into()))?;
+            let model =
+                config.llm.model.clone().ok_or_else(|| {
+                    EngineError::Config("Missing model for DeepSeek provider".into())
+                })?;
             let temperature = config.generation.temperature.unwrap_or(0.1);
             Ok(Box::new(deepseek::DeepSeekProvider::new(
                 api_key,

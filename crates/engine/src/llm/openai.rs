@@ -47,6 +47,15 @@ struct ChatCompletionChoice {
 #[derive(Deserialize)]
 struct ChatCompletionResponse {
     choices: Vec<ChatCompletionChoice>,
+    #[serde(default)]
+    usage: Option<Usage>,
+}
+
+#[derive(Deserialize)]
+struct Usage {
+    prompt_tokens: u32,
+    completion_tokens: u32,
+    total_tokens: u32,
 }
 
 #[async_trait]
@@ -78,6 +87,10 @@ impl LlmProvider for OpenAiProvider {
             .first()
             .map(|c| c.message.content.clone())
             .unwrap_or_default();
-        Ok(LlmResponse { content })
+        let tokens = res.usage.map(|u| u.total_tokens).unwrap_or(0);
+        Ok(LlmResponse {
+            content,
+            token_usage: tokens,
+        })
     }
 }

@@ -72,6 +72,8 @@ impl ReviewEngine {
         log::info!("Engine running with config: {:?}", self.config);
         log::debug!("Analyzing diff: {}", diff);
 
+        let mut total_tokens_used: u32 = 0;
+
         // 1. Parse the diff to identify changed files and hunks.
         let changed_files = diff_parser::parse(diff)?;
 
@@ -99,22 +101,26 @@ impl ReviewEngine {
         }
 
         // 3. Retrieve RAG context for flagged regions.
-        let vector_store: Box<dyn VectorStore + Send + Sync> = if let Some(path) = &self.config.index_path {
-            match InMemoryVectorStore::load_from_disk(path) {
-                Ok(store) => Box::new(store),
-                Err(e) => {
-                    log::warn!("Failed to load vector index from {}: {}", path, e);
-                    Box::new(InMemoryVectorStore::default())
+        let vector_store: Box<dyn VectorStore + Send + Sync> =
+            if let Some(path) = &self.config.index_path {
+                match InMemoryVectorStore::load_from_disk(path) {
+                    Ok(store) => Box::new(store),
+                    Err(e) => {
+                        log::warn!("Failed to load vector index from {}: {}", path, e);
+                        Box::new(InMemoryVectorStore::default())
+                    }
                 }
-            }
-        } else {
-            Box::new(InMemoryVectorStore::default())
-        };
+            } else {
+                Box::new(InMemoryVectorStore::default())
+            };
         let rag = RagContextRetriever::new(vector_store);
         let mut contexts = Vec::new();
         for issue in &issues {
             if let Ok(ctx) = rag
-                .retrieve(&format!("{}:{} {}", issue.file_path, issue.line_number, issue.description))
+                .retrieve(&format!(
+                    "{}:{} {}",
+                    issue.file_path, issue.line_number, issue.description
+                ))
                 .await
             {
                 contexts.push(ctx);
@@ -155,12 +161,32 @@ impl ReviewEngine {
         );
 
         // 5. Call the selected LLM provider for suggestions.
+        if let Some(max) = self.config.budget.tokens.max_per_run {
+            if total_tokens_used >= max {
+                return Err(EngineError::TokenBudgetExceeded {
+                    used: total_tokens_used,
+                    max,
+                });
+            }
+        }
         let llm_response = self.llm.generate(&prompt).await?;
+        total_tokens_used = total_tokens_used.saturating_add(llm_response.token_usage);
+        if let Some(max) = self.config.budget.tokens.max_per_run {
+            if total_tokens_used > max {
+                return Err(EngineError::TokenBudgetExceeded {
+                    used: total_tokens_used,
+                    max,
+                });
+            }
+        }
 
         // 6. Build and return the ReviewReport.
         let report = ReviewReport {
             summary: llm_response.content,
             issues,
+            code_quality: Vec::new(),
+            hotspots: Vec::new(),
+            mermaid_diagram: None,
             config: self.config.clone(),
         };
 
