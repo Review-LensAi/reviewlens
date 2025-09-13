@@ -38,9 +38,11 @@ async fn main() -> anyhow::Result<()> {
     // In a real app, you'd load this from a `reviewer.toml` file.
     let config = engine::config::Config {
         llm: engine::config::LlmConfig {
-            provider: "local".to_string(),
+            provider: engine::config::Provider::Local,
             model: "dummy".to_string(),
             temperature: 0.1,
+            api_key: None,
+            base_url: None,
         },
         project: engine::config::ProjectConfig {
             include: vec!["**/*".to_string()],
@@ -51,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
             secrets: true,
         },
     };
-    let engine = ReviewEngine::new(config);
+    let engine = ReviewEngine::new(config)?;
 
     // Execute the subcommand
     match cli.command {

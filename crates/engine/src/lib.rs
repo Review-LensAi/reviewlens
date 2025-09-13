@@ -11,31 +11,37 @@
 
 // Public modules
 pub mod config;
+pub mod diff_parser;
 pub mod error;
 pub mod llm;
 pub mod rag;
 pub mod report;
 pub mod scanner;
-pub mod diff_parser;
 
 use crate::config::Config;
 use crate::error::Result;
+use crate::llm::{create_llm_provider, LlmProvider};
 
 /// The main engine struct.
 pub struct ReviewEngine {
     config: Config,
+    llm: Box<dyn LlmProvider>,
 }
 
 impl ReviewEngine {
     /// Creates a new instance of the review engine from a given configuration.
-    pub fn new(config: Config) -> Self {
-        Self { config }
+    pub fn new(config: Config) -> Result<Self> {
+        let llm = create_llm_provider(&config.llm)?;
+        Ok(Self { config, llm })
     }
 
     /// Runs a complete code review analysis on a given diff.
     pub async fn run(&self, diff: &str) -> Result<()> {
         println!("Engine running with config: {:?}", self.config);
         println!("Analyzing diff: {}", diff);
+        // Example usage of the configured LLM provider.
+        let response = self.llm.generate("Summarize the diff").await?;
+        println!("LLM response: {}", response.content);
         // 1. Parse the diff.
         // 2. Use scanner to find hard-coded issues.
         // 3. Use RAG to fetch relevant context from the codebase.

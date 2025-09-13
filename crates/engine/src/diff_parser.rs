@@ -1,6 +1,6 @@
 //! Logic for parsing diffs to identify changed files and hunks.
 
-use crate::error::{EngineError, Result};
+use crate::error::Result;
 
 /// Represents a single changed file in a diff.
 #[derive(Debug)]

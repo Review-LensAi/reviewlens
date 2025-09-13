@@ -4,7 +4,8 @@
 //! interface for interacting with different Large Language Models (LLMs).
 //! It ensures that the core engine remains provider-agnostic.
 
-use crate::error::Result;
+use crate::config::{LlmConfig, Provider};
+use crate::error::{EngineError, Result};
 use async_trait::async_trait;
 
 /// Represents a response from an LLM.
@@ -41,5 +42,52 @@ impl LlmProvider for LocalOnlyProvider {
         Ok(LlmResponse {
             content: "This is a dummy response from the local-only provider.".to_string(),
         })
+    }
+}
+
+pub mod anthropic;
+pub mod deepseek;
+pub mod openai;
+
+/// Creates an `LlmProvider` instance based on configuration.
+pub fn create_llm_provider(config: &LlmConfig) -> Result<Box<dyn LlmProvider>> {
+    match config.provider {
+        Provider::Openai => {
+            let key = config
+                .api_key
+                .clone()
+                .ok_or_else(|| EngineError::Config("Missing OpenAI api_key".into()))?;
+            Ok(Box::new(openai::OpenAiProvider::new(
+                key,
+                config.model.clone(),
+                config.temperature,
+                config.base_url.clone(),
+            )))
+        }
+        Provider::Anthropic => {
+            let key = config
+                .api_key
+                .clone()
+                .ok_or_else(|| EngineError::Config("Missing Anthropic api_key".into()))?;
+            Ok(Box::new(anthropic::AnthropicProvider::new(
+                key,
+                config.model.clone(),
+                config.temperature,
+                config.base_url.clone(),
+            )))
+        }
+        Provider::Deepseek => {
+            let key = config
+                .api_key
+                .clone()
+                .ok_or_else(|| EngineError::Config("Missing DeepSeek api_key".into()))?;
+            Ok(Box::new(deepseek::DeepSeekProvider::new(
+                key,
+                config.model.clone(),
+                config.temperature,
+                config.base_url.clone(),
+            )))
+        }
+        Provider::Local => Ok(Box::new(LocalOnlyProvider)),
     }
 }
