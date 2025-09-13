@@ -89,6 +89,14 @@ cp reviewer.toml.example reviewer.toml
 
 Next, edit `reviewer.toml` to configure your desired LLM provider, model, project paths, and review rules. At a minimum, you must set your LLM provider and API key.
 
+Configuration values are merged from multiple sources. The precedence is:
+
+1. CLI flags
+2. Environment variables (prefixed with `REVIEWER_`)
+3. Values from `reviewer.toml`
+
+For example, `--llm-provider anthropic` overrides `REVIEWER_LLM_PROVIDER`, which in turn overrides the `llm.provider` value in the configuration file.
+
 ### 2. Usage
 
 The primary command is `reviewer-cli check`. It analyzes the difference between your current branch and a base branch (e.g., `main`).

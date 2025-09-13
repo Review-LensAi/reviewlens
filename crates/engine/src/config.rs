@@ -34,7 +34,7 @@ pub struct Config {
 }
 
 // As per PRD: `null | openai | anthropic | deepseek`
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, ValueEnum)]
 #[serde(rename_all = "kebab-case")]
 pub enum Provider {
     #[serde(rename = "null")]
@@ -42,6 +42,18 @@ pub enum Provider {
     Openai,
     Anthropic,
     Deepseek,
+}
+
+impl Provider {
+    /// Returns the kebab-case name of the provider.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Provider::Null => "null",
+            Provider::Openai => "openai",
+            Provider::Anthropic => "anthropic",
+            Provider::Deepseek => "deepseek",
+        }
+    }
 }
 
 // Default provider is "null"

@@ -29,6 +29,17 @@ use regex::Regex;
 use std::fs;
 use std::path::Path;
 
+/// Returns the list of LLM providers compiled into this binary.
+pub fn compiled_providers() -> Vec<config::Provider> {
+    use config::Provider;
+    vec![
+        Provider::Null,
+        Provider::Openai,
+        Provider::Anthropic,
+        Provider::Deepseek,
+    ]
+}
+
 /// Placeholder used when redacting sensitive information.
 const REDACTION_PLACEHOLDER: &str = "[REDACTED]";
 
