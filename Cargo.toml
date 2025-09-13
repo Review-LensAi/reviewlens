@@ -1,0 +1,40 @@
+[workspace]
+members = [
+    "crates/cli",
+    "crates/engine",
+]
+
+[workspace.package]
+version = "0.1.0-alpha"
+edition = "2021"
+authors = ["AI Agent <ai-agent@example.com>"]
+description = "An intelligent, context-aware, and security-first code review agent."
+license = "MIT OR Apache-2.0"
+repository = "https://example.com/intelligent-code-reviewer"
+homepage = "https://example.com/intelligent-code-reviewer"
+
+[workspace.dependencies]
+# --- Internal Crates ---
+# To be filled in as we build
+
+# --- External Crates ---
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Serialization / Deserialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Async
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# Error Handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Tracing & Telemetry (for later)
+# tracing = "0.1"
+# tracing-subscriber = "0.3"

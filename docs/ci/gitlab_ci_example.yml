@@ -1,0 +1,24 @@
+# Example GitLab CI configuration for the Intelligent Code Review Agent
+
+stages:
+  - review
+
+code_review:
+  stage: review
+  image: rust:latest
+  script:
+    # Ensure git is available for diffing
+    - apt-get update && apt-get install -y git
+    # Build the CLI
+    - cargo build --release
+    # Run the review against the target branch of the merge request
+    - ./target/release/reviewer-cli check --diff $CI_MERGE_REQUEST_TARGET_BRANCH_NAME --output review_report.md
+  artifacts:
+    paths:
+      - review_report.md
+    when: always
+  rules:
+    # Run this job only for merge requests
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+      # Allow the job to fail without failing the pipeline, so the report is still accessible
+      allow_failure: true
