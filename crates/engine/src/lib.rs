@@ -30,6 +30,7 @@ use std::fs;
 /// The main engine struct.
 pub struct ReviewEngine {
     config: Config,
+    scanners: Vec<Box<dyn Scanner>>,
     llm: Box<dyn LlmProvider>,
 }
 
@@ -37,7 +38,8 @@ impl ReviewEngine {
     /// Creates a new instance of the review engine from a given configuration.
     pub fn new(config: Config) -> Result<Self> {
         let llm = create_llm_provider(&config.llm)?;
-        Ok(Self { config, llm })
+        let scanners = crate::scanner::load_enabled_scanners(&config);
+        Ok(Self { config,scanners, llm })
     }
 
     /// Runs a complete code review analysis on a given diff.
