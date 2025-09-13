@@ -1,7 +1,7 @@
 //! The command-line interface for the Intelligent Code Review Agent.
 
 use clap::Parser;
-use engine::ReviewEngine;
+use engine::{config::Config, ReviewEngine};
 use std::path::PathBuf;
 
 mod commands;
@@ -30,6 +30,8 @@ enum Commands {
     Check(commands::check::CheckArgs),
     /// Manages the RAG index for a repository.
     Index(commands::index::IndexArgs),
+    /// Prints the effective configuration.
+    PrintConfig(commands::print_config::PrintConfigArgs),
 }
 
 #[tokio::main]
@@ -39,31 +41,35 @@ async fn main() -> anyhow::Result<()> {
 
     let cli = Cli::parse();
 
-    // Placeholder: Load config and initialize the engine
-    // In a real app, you'd load this from a `reviewer.toml` file.
-    let config = engine::config::Config {
-        llm: engine::config::LlmConfig {
-            provider: engine::config::Provider::Local,
-            model: "dummy".to_string(),
-            temperature: 0.1,
-            api_key: None,
-            base_url: None,
-        },
-        project: engine::config::ProjectConfig {
-            include: vec!["**/*".to_string()],
-            exclude: vec!["target/*".to_string(), ".git/*".to_string()],
-        },
-        rules: engine::config::RulesConfig {
-            owasp_top_5: true,
-            secrets: true,
-        },
+    // Load configuration from the path specified in the CLI arguments.
+    // If the file doesn't exist, use the default configuration.
+    let config = if cli.config.exists() {
+        log::info!("Loading configuration from: {:?}", cli.config);
+        Config::load_from_path(&cli.config)?
+    } else {
+        log::info!(
+            "Configuration file {:?} not found. Using default configuration.",
+            cli.config
+        );
+        Config::default()
     };
+
+    // The `print-config` command does not need the engine, so we handle it
+    // before initializing the engine.
+    if let Commands::PrintConfig(args) = &cli.command {
+        return commands::print_config::run(args.clone(), &config);
+    }
+
     let engine = ReviewEngine::new(config)?;
 
     // Execute the subcommand
     match cli.command {
         Commands::Check(args) => commands::check::run(args, &engine).await?,
         Commands::Index(args) => commands::index::run(args, &engine).await?,
+        Commands::PrintConfig(_) => {
+            // This case is handled above, but the compiler needs it to be exhaustive.
+            unreachable!()
+        }
     }
 
     Ok(())

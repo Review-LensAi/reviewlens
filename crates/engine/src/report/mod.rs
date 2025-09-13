@@ -4,13 +4,13 @@
 //! and formats them into a final report, such as a Markdown file.
 
 use crate::error::Result;
-use crate::scanner::Issue;
+use crate::{config::Config, scanner::Issue};
 
 /// Represents the final, consolidated review findings.
 pub struct ReviewReport {
     pub summary: String,
     pub issues: Vec<Issue>,
-    // Could also include LLM-generated suggestions, diagrams, etc.
+    pub config: Config,
 }
 
 /// A trait for generating a report from review findings.
@@ -36,21 +36,36 @@ impl ReportGenerator for MarkdownGenerator {
 
         md.push_str("# Code Review Report\n\n");
 
-        md.push_str("## summary\n\n");
+        md.push_str("## Summary\n\n");
         md.push_str(&report.summary);
         md.push_str("\n\n");
 
-        md.push_str("## 🚨 Issues Found\n\n");
-        if report.issues.is_empty() {
+        md.push_str("## 🚨 Security Findings\n\n");
+
+        let mut sorted_issues = report.issues.clone();
+        sorted_issues.sort_by(|a, b| b.severity.cmp(&a.severity));
+
+        if sorted_issues.is_empty() {
             md.push_str("✅ No issues found.\n");
         } else {
-            for issue in &report.issues {
+            md.push_str("| Severity | Title | File:Line | Description |\n");
+            md.push_str("|---|---|---|---|\n");
+            for issue in &sorted_issues {
                 md.push_str(&format!(
-                    "- **[{:?}] {}**\n  - **File**: `{}:{}`\n  - **Description**: {}\n",
+                    "| `{:?}` | {} | `{}:{}` | {} |\n",
                     issue.severity, issue.title, issue.file_path, issue.line_number, issue.description
                 ));
             }
         }
+
+        md.push_str("\n\n---\n\n");
+        md.push_str("## Appendix: Configuration Snapshot\n\n");
+        md.push_str("This review was run with the following configuration:\n\n");
+        md.push_str("```json\n");
+        let config_json = serde_json::to_string_pretty(&report.config)
+            .map_err(|e| crate::error::EngineError::Report(e.to_string()))?;
+        md.push_str(&config_json);
+        md.push_str("\n```\n");
 
         Ok(md)
     }

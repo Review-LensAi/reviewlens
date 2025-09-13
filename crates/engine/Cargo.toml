@@ -24,7 +24,7 @@ reqwest.workspace = true
 # Example: for git operations
 # git2 = "0.18"
 # Example: for regex-based scanning
-# regex = "1.10"
+regex = "1.10"
 once_cell = "1"
 
 [features]

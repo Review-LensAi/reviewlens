@@ -1,34 +1,54 @@
-use engine::config::{Config, Provider};
+use engine::config::{Config, Provider, Severity};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 
 #[test]
-fn load_from_path_reads_toml() {
+fn load_from_path_reads_new_toml_format() {
     let toml = r#"
 [llm]
-provider = "local"
-model = "dummy"
-temperature = 0.5
+provider = "null"
+model = "test-model"
 
-[project]
-include = ["src/**/*"]
-exclude = ["target/*"]
+[paths]
+allow = ["src/**"]
+deny = ["vendor/**"]
 
-[rules]
-owasp-top-5 = true
-secrets = false
+[privacy.redaction]
+enabled = false
+
+[rules.secrets]
+enabled = true
+severity = "critical"
 "#;
 
     let mut path = env::temp_dir();
-    let filename = format!("reviewlens_test_{}.toml", SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos());
+    let filename = format!(
+        "reviewer_test_{}.toml",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
     path.push(filename);
     fs::write(&path, toml).unwrap();
 
     let config = Config::load_from_path(&path).expect("config should load");
     fs::remove_file(&path).unwrap();
 
-    assert_eq!(config.llm.provider, Provider::Local);
-    assert_eq!(config.project.include, vec!["src/**/*".to_string()]);
-    assert!(config.rules.owasp_top_5);
-    assert!(!config.rules.secrets);
+    assert_eq!(config.llm.provider, Provider::Null);
+    assert_eq!(config.llm.model, Some("test-model".to_string()));
+    assert_eq!(config.paths.allow, vec!["src/**".to_string()]);
+    assert_eq!(config.paths.deny, vec!["vendor/**".to_string()]);
+    assert!(!config.privacy.redaction.enabled);
+    assert!(config.rules.secrets.enabled);
+    assert_eq!(config.rules.secrets.severity, Severity::Critical);
+}
+
+#[test]
+fn default_config_is_sane() {
+    let config = Config::default();
+    assert_eq!(config.llm.provider, Provider::Null);
+    assert!(config.privacy.redaction.enabled); // Should be true by default
+    assert!(config.rules.secrets.enabled);
+    assert_eq!(config.rules.secrets.severity, Severity::Medium);
 }

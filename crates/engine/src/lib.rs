@@ -23,7 +23,7 @@ use crate::error::Result;
 use crate::llm::{create_llm_provider, LlmProvider};
 use crate::rag::{InMemoryVectorStore, RagContextRetriever};
 use crate::report::ReviewReport;
-use crate::scanner::{Scanner, TodoScanner};
+use crate::scanner::Scanner;
 use std::fs;
 
 /// The main engine struct.
@@ -36,7 +36,7 @@ pub struct ReviewEngine {
 impl ReviewEngine {
     /// Creates a new instance of the review engine from a given configuration.
     pub fn new(config: Config) -> Result<Self> {
-        let llm = create_llm_provider(&config.llm)?;
+        let llm = create_llm_provider(&config)?;
         let scanners = crate::scanner::load_enabled_scanners(&config);
         Ok(Self { config,scanners, llm })
     }
@@ -51,11 +51,10 @@ impl ReviewEngine {
 
         // 2. Run configured scanners on the changed files.
         let mut issues = Vec::new();
-        let scanners: Vec<Box<dyn Scanner>> = vec![Box::new(TodoScanner)];
         for file in changed_files {
             let content = fs::read_to_string(&file.path)?;
-            for scanner in &scanners {
-                let mut found = scanner.scan(&file.path, &content)?;
+            for scanner in &self.scanners {
+                let mut found = scanner.scan(&file.path, &content, &self.config)?;
                 issues.append(&mut found);
             }
         }
@@ -79,6 +78,7 @@ impl ReviewEngine {
         let report = ReviewReport {
             summary: llm_response.content,
             issues,
+            config: self.config.clone(),
         };
 
         Ok(report)

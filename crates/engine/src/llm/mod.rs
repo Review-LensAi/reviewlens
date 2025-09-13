@@ -4,7 +4,7 @@
 //! interface for interacting with different Large Language Models (LLMs).
 //! It ensures that the core engine remains provider-agnostic.
 
-use crate::config::{LlmConfig, Provider};
+use crate::config::{Config, Provider};
 use crate::error::{EngineError, Result};
 use async_trait::async_trait;
 
@@ -29,18 +29,18 @@ pub trait LlmProvider {
     async fn generate(&self, prompt: &str) -> Result<LlmResponse>;
 }
 
-// Example of how you might implement a "null" or "dummy" provider for local-only mode.
-pub struct LocalOnlyProvider;
+/// The "null" provider for local-only/offline mode.
+pub struct NullProvider;
 
 #[async_trait]
-impl LlmProvider for LocalOnlyProvider {
+impl LlmProvider for NullProvider {
     async fn generate(&self, prompt: &str) -> Result<LlmResponse> {
-        println!("--- LLM Call (Local-Only Mode) ---");
-        println!("Prompt: {}", prompt);
-        println!("--- End LLM Call ---");
+        log::info!("--- LLM Call (Null Provider) ---");
+        log::debug!("Prompt: {}", prompt);
+        log::info!("--- End LLM Call ---");
 
         Ok(LlmResponse {
-            content: "This is a dummy response from the local-only provider.".to_string(),
+            content: "This is a dummy response from the null provider.".to_string(),
         })
     }
 }
@@ -50,44 +50,67 @@ pub mod deepseek;
 pub mod openai;
 
 /// Creates an `LlmProvider` instance based on configuration.
-pub fn create_llm_provider(config: &LlmConfig) -> Result<Box<dyn LlmProvider>> {
-    match config.provider {
+pub fn create_llm_provider(config: &Config) -> Result<Box<dyn LlmProvider>> {
+    match &config.llm.provider {
         Provider::Openai => {
-            let key = config
+            let api_key = config
+                .llm
                 .api_key
                 .clone()
                 .ok_or_else(|| EngineError::Config("Missing OpenAI api_key".into()))?;
+            let model = config
+                .llm
+                .model
+                .clone()
+                .ok_or_else(|| EngineError::Config("Missing model for OpenAI provider".into()))?;
+            let temperature = config.generation.temperature.unwrap_or(0.1);
             Ok(Box::new(openai::OpenAiProvider::new(
-                key,
-                config.model.clone(),
-                config.temperature,
-                config.base_url.clone(),
+                api_key,
+                model,
+                temperature,
+                config.llm.base_url.clone(),
             )))
         }
         Provider::Anthropic => {
-            let key = config
+            let api_key = config
+                .llm
                 .api_key
                 .clone()
                 .ok_or_else(|| EngineError::Config("Missing Anthropic api_key".into()))?;
+            let model = config
+                .llm
+                .model
+                .clone()
+                .ok_or_else(|| {
+                    EngineError::Config("Missing model for Anthropic provider".into())
+                })?;
+            let temperature = config.generation.temperature.unwrap_or(0.1);
             Ok(Box::new(anthropic::AnthropicProvider::new(
-                key,
-                config.model.clone(),
-                config.temperature,
-                config.base_url.clone(),
+                api_key,
+                model,
+                temperature,
+                config.llm.base_url.clone(),
             )))
         }
         Provider::Deepseek => {
-            let key = config
+            let api_key = config
+                .llm
                 .api_key
                 .clone()
                 .ok_or_else(|| EngineError::Config("Missing DeepSeek api_key".into()))?;
+            let model = config
+                .llm
+                .model
+                .clone()
+                .ok_or_else(|| EngineError::Config("Missing model for DeepSeek provider".into()))?;
+            let temperature = config.generation.temperature.unwrap_or(0.1);
             Ok(Box::new(deepseek::DeepSeekProvider::new(
-                key,
-                config.model.clone(),
-                config.temperature,
-                config.base_url.clone(),
+                api_key,
+                model,
+                temperature,
+                config.llm.base_url.clone(),
             )))
         }
-        Provider::Local => Ok(Box::new(LocalOnlyProvider)),
+        Provider::Null => Ok(Box::new(NullProvider)),
     }
 }
