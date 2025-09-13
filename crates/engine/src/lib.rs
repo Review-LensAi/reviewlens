@@ -38,7 +38,11 @@ impl ReviewEngine {
     pub fn new(config: Config) -> Result<Self> {
         let llm = create_llm_provider(&config)?;
         let scanners = crate::scanner::load_enabled_scanners(&config);
-        Ok(Self { config,scanners, llm })
+        Ok(Self {
+            config,
+            scanners,
+            llm,
+        })
     }
 
     /// Runs a complete code review analysis on a given diff.
@@ -61,17 +65,30 @@ impl ReviewEngine {
 
         // 3. Retrieve RAG context for flagged regions.
         let rag = RagContextRetriever::new(Box::new(InMemoryVectorStore::default()));
+        let mut contexts = Vec::new();
         for issue in &issues {
-            let _ = rag
-                .retrieve(&format!("{}:{} {}", issue.file_path, issue.line_number, issue.description))
-                .await?;
+            if let Ok(ctx) = rag
+                .retrieve(&format!(
+                    "{}:{} {}",
+                    issue.file_path, issue.line_number, issue.description
+                ))
+                .await
+            {
+                contexts.push(ctx);
+            }
         }
 
         // 4. Call the selected LLM provider for suggestions.
-        let prompt = format!(
+        let mut prompt = String::new();
+        if !contexts.is_empty() {
+            prompt.push_str("Context:\n");
+            prompt.push_str(&contexts.join("\n\n"));
+            prompt.push_str("\n\n");
+        }
+        prompt.push_str(&format!(
             "Provide a review summary for the following issues: {:?}",
             issues
-        );
+        ));
         let llm_response = self.llm.generate(&prompt).await?;
 
         // 5. Build and return the ReviewReport.
