@@ -22,7 +22,7 @@ use crate::config::Config;
 use crate::error::{EngineError, Result};
 use crate::llm::{create_llm_provider, LlmProvider};
 use crate::rag::{InMemoryVectorStore, RagContextRetriever, VectorStore};
-use crate::report::ReviewReport;
+use crate::report::{ReviewReport, RuntimeMetadata, TimingInfo};
 use crate::scanner::Scanner;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use regex::Regex;
@@ -30,6 +30,7 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::time::Instant;
 
 /// Returns the list of LLM providers compiled into this binary.
 pub fn compiled_providers() -> Vec<config::Provider> {
@@ -44,6 +45,9 @@ pub fn compiled_providers() -> Vec<config::Provider> {
 
 /// Placeholder used when redacting sensitive information.
 const REDACTION_PLACEHOLDER: &str = "[REDACTED]";
+
+/// Version identifier for the ruleset bundled with the engine.
+const RULESET_VERSION: &str = "1.0.0";
 
 /// Redacts sensitive information from the provided text based on the
 /// configured redaction patterns.
@@ -89,6 +93,7 @@ impl ReviewEngine {
     pub async fn run(&self, diff: &str) -> Result<ReviewReport> {
         log::info!("Engine running with config: {:?}", self.config);
         log::debug!("Analyzing diff: {}", diff);
+        let start_time = Instant::now();
 
         let mut total_tokens_used: u32 = 0;
 
@@ -225,17 +230,17 @@ impl ReviewEngine {
             .collect();
 
         // 3. Retrieve RAG context for flagged regions.
-        let vector_store: Box<dyn VectorStore + Send + Sync> =
-            if let Some(path) = self.config.index_path() {
+        let (vector_store, index_warm): (Box<dyn VectorStore + Send + Sync>, bool) =
+            if let Some(path) = &self.config.index_path {
                 match InMemoryVectorStore::load_from_disk(path) {
-                    Ok(store) => Box::new(store),
+                    Ok(store) => (Box::new(store), true),
                     Err(e) => {
                         log::warn!("Failed to load vector index from {}: {}", path, e);
-                        Box::new(InMemoryVectorStore::default())
+                        (Box::new(InMemoryVectorStore::default()), false)
                     }
                 }
             } else {
-                Box::new(InMemoryVectorStore::default())
+                (Box::new(InMemoryVectorStore::default()), false)
             };
         let rag = RagContextRetriever::new(vector_store);
         let mut contexts = Vec::new();
@@ -304,6 +309,18 @@ impl ReviewEngine {
             }
         }
 
+        // 6. Build and return the ReviewReport.
+        let elapsed_ms = start_time.elapsed().as_millis();
+        let metadata = RuntimeMetadata {
+            ruleset_version: RULESET_VERSION.to_string(),
+            model: self.config.llm.model.clone(),
+            driver: self.config.llm.provider.as_str().to_string(),
+            timings: TimingInfo {
+                total_ms: elapsed_ms,
+            },
+            index_warm,
+        };
+              
         // 8. Build and return the ReviewReport.
         let report = ReviewReport {
             summary: llm_response.content,
@@ -312,6 +329,7 @@ impl ReviewEngine {
             hotspots,
             mermaid_diagram,
             config: self.config.clone(),
+            metadata,
         };
 
         Ok(report)
