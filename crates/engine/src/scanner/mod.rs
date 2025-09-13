@@ -35,6 +35,8 @@ pub trait Scanner: Send + Sync {
 
 pub mod secrets;
 pub use secrets::SecretsScanner;
+pub mod convention_deviation;
+pub use convention_deviation::ConventionDeviationScanner;
 
 static SQL_INJECTION_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
@@ -124,6 +126,9 @@ fn register_builtin_scanners() {
         register_scanner("secrets", || Box::new(SecretsScanner));
         register_scanner("sql-injection-go", || Box::new(SqlInjectionGoScanner));
         register_scanner("http-timeouts-go", || Box::new(HttpTimeoutsGoScanner));
+        register_scanner("convention-deviation", || {
+            Box::new(ConventionDeviationScanner)
+        });
     });
 }
 
@@ -148,7 +153,11 @@ pub fn load_enabled_scanners(config: &Config) -> Vec<Box<dyn Scanner>> {
             scanners.push(factory());
         }
     }
-    // Note: convention_deviation is for RAG, not a simple scanner, so not loaded here.
+    if config.rules.convention_deviation.enabled {
+        if let Some(factory) = registry.get("convention-deviation") {
+            scanners.push(factory());
+        }
+    }
 
     scanners
 }
