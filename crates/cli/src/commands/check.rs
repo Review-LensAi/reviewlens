@@ -30,11 +30,10 @@ pub struct CheckArgs {
 
 /// Executes the `check` subcommand.
 pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<()> {
-    println!("Running 'check' with the following arguments:");
-    println!("  Diff base: {}", args.diff);
-    println!("  Path: {}", args.path);
-    println!("  Output: {}", args.output);
-    println!("  Fail on: {:?}", args.fail_on);
+    log::info!("Running 'check' with the following arguments:");
+    log::info!("  Diff base: {}", args.diff);
+    log::info!("  Path: {}", args.path);
+    log::info!("  Output: {}", args.output);
 
     // 1. Generate the diff against the specified base reference.
     let diff_output = Command::new("git")
@@ -59,7 +58,7 @@ pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<()> {
         .generate(&report)
         .map_err(|e| anyhow::anyhow!(e))?;
     fs::write(&args.output, &report_md)?;
-    println!("\nReview complete. Report written to {}.", args.output);
+    log::info!("\nReview complete. Report written to {}.", args.output);
 
     // 4. Exit non-zero based on severity threshold.
     if let Some(threshold) = args.fail_on {

@@ -2,6 +2,9 @@
 
 use clap::Parser;
 use engine::{config::Config, ReviewEngine};
+use env_logger::Target;
+use log::LevelFilter;
+use std::io::Write;
 use std::path::PathBuf;
 
 mod commands;
@@ -36,21 +39,37 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Initialize logging
-    env_logger::init();
-
     let cli = Cli::parse();
+
+    let mut builder =
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"));
+    builder.filter_level(match cli.verbose {
+        0 => LevelFilter::Warn,
+        1 => LevelFilter::Info,
+        2 => LevelFilter::Debug,
+        _ => LevelFilter::Trace,
+    });
+    if matches!(cli.command, Commands::PrintConfig(_)) && cli.verbose == 0 {
+        builder.filter_level(LevelFilter::Info);
+    }
+    builder.target(Target::Stdout);
+    builder.format(|f, record| writeln!(f, "{}", record.args()));
+    builder.init();
 
     // Load configuration from the path specified in the CLI arguments.
     // If the file doesn't exist, use the default configuration.
     let config = if cli.config.exists() {
-        log::info!("Loading configuration from: {:?}", cli.config);
+        if !matches!(cli.command, Commands::PrintConfig(_)) {
+            log::info!("Loading configuration from: {:?}", cli.config);
+        }
         Config::load_from_path(&cli.config)?
     } else {
-        log::info!(
-            "Configuration file {:?} not found. Using default configuration.",
-            cli.config
-        );
+        if !matches!(cli.command, Commands::PrintConfig(_)) {
+            log::info!(
+                "Configuration file {:?} not found. Using default configuration.",
+                cli.config
+            );
+        }
         Config::default()
     };
 

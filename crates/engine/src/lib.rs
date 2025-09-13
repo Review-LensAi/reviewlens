@@ -71,8 +71,8 @@ impl ReviewEngine {
 
     /// Runs a complete code review analysis on a given diff.
     pub async fn run(&self, diff: &str) -> Result<ReviewReport> {
-        println!("Engine running with config: {:?}", self.config);
-        println!("Analyzing diff: {}", diff);
+        log::info!("Engine running with config: {:?}", self.config);
+        log::debug!("Analyzing diff: {}", diff);
 
         // 1. Parse the diff to identify changed files and hunks.
         let changed_files = diff_parser::parse(diff)?;
