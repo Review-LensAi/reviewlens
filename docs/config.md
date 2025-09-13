@@ -14,6 +14,17 @@ deny  = ["target/*", "**/testdata/*"]
 ```
 Only files in `paths.allow` are indexed, helping enforce repository boundaries.
 
+## Index
+
+Override the location of the pre-built vector index:
+
+```toml
+[index]
+path = ".reviewer/index/index.json"
+```
+
+The older top-level `index-path` setting is deprecated.
+
 ## LLM Provider
 ```toml
 [llm]

@@ -1,5 +1,5 @@
 use engine::{
-    config::Config,
+    config::{Config, IndexConfig},
     report::{MarkdownGenerator, ReportGenerator},
     ReviewEngine,
 };
@@ -34,7 +34,9 @@ async fn run_populates_code_quality_and_hotspots() {
 
     let index = build_index(&[("existing.rs", "fn existing() { log::info!(\"hi\"); }")]);
     let mut config = Config::default();
-    config.index_path = Some(index.path().to_str().unwrap().to_string());
+    config.index = Some(IndexConfig {
+        path: index.path().to_str().unwrap().to_string(),
+    });
 
     let engine = ReviewEngine::new(config).unwrap();
     let report = engine.run(&diff).await.unwrap();

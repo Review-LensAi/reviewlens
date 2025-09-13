@@ -1,4 +1,4 @@
-use engine::{config::Config, ReviewEngine};
+use engine::{config::{Config, IndexConfig}, ReviewEngine};
 use serde_json::json;
 use std::fs;
 use std::io::Write;
@@ -34,7 +34,9 @@ async fn only_reports_issues_on_changed_lines() {
 
     let index = build_index(&[("existing.rs", "fn existing() { log::info!(\"hi\"); }")]);
     let mut config = Config::default();
-    config.index_path = Some(index.path().to_str().unwrap().to_string());
+    config.index = Some(IndexConfig {
+        path: index.path().to_str().unwrap().to_string(),
+    });
 
     let engine = ReviewEngine::new(config).unwrap();
     let report = engine.run(&diff).await.unwrap();

@@ -2,7 +2,7 @@
 
 use clap::Parser;
 use engine::{
-    config::{Config, Provider},
+    config::{Config, IndexConfig, Provider},
     ReviewEngine,
 };
 use env_logger::Target;
@@ -144,7 +144,7 @@ async fn main() -> anyhow::Result<()> {
         config.llm.base_url = Some(url);
     }
     if let Some(path) = cli.index_path {
-        config.index_path = Some(path);
+        config.index = Some(IndexConfig { path });
     }
     if let Some(max) = cli.budget_tokens_max_per_run {
         config.budget.tokens.max_per_run = Some(max);

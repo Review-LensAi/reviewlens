@@ -1,4 +1,5 @@
-index-path = "index.json"
+[index]
+path = "index.json"
 
 [paths]
 allow = ["**/*"]
