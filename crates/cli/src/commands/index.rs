@@ -29,25 +29,15 @@ pub async fn run(args: IndexArgs, _engine: &ReviewEngine) -> anyhow::Result<()> 
     log::info!("  Force: {}", args.force);
     log::info!("  Output: {}", args.output);
 
-    // Build the index using the engine's repository indexer.
-    let store = index_repository(&args.path, args.force)
+    // Build (or load) the index using the engine's repository indexer.
+    let store = index_repository(&args.path, &args.output, args.force)
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
-
-    // Persist the index to the requested location.
     log::info!(
-        "Index built with {} documents. Persisting to {}",
+        "Index available with {} documents at {}",
         store.len(),
         args.output
     );
-    if let Some(parent) = Path::new(&args.output).parent() {
-        if !parent.as_os_str().is_empty() {
-            fs::create_dir_all(parent)?;
-        }
-    }
-    let file = fs::File::create(&args.output)?;
-    serde_json::to_writer_pretty(file, &store)?;
-    log::info!("Index written to {}", args.output);
 
     Ok(())
 }
