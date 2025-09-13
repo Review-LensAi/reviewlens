@@ -7,6 +7,7 @@
 
 use crate::config::Config;
 use crate::error::Result;
+use crate::rag::Document as IndexedDocument;
 use crate::scanner::{Issue, Scanner};
 use regex::Regex;
 use serde::Deserialize;
@@ -14,12 +15,6 @@ use std::fs;
 
 /// Scanner that flags code which deviates from repository conventions.
 pub struct ConventionDeviationScanner;
-
-#[derive(Deserialize)]
-struct IndexedDocument {
-    filename: String,
-    content: String,
-}
 
 #[derive(Deserialize)]
 struct IndexStore {
@@ -35,37 +30,41 @@ fn derive_patterns(docs: &[IndexedDocument]) -> (Vec<ConventionPattern>, bool) {
     let mut patterns = Vec::new();
     if docs
         .iter()
-        .all(|d| !d.content.contains("println!") && !d.content.contains("eprintln!"))
+        .all(|d| d
+            .log_patterns
+            .iter()
+            .all(|l| !l.contains("println!") && !l.contains("eprintln!")))
     {
         patterns.push(ConventionPattern {
             regex: Regex::new("println!|eprintln!").unwrap(),
             description: "Use logging macros instead of println!/eprintln!",
         });
     }
-    if docs.iter().all(|d| !d.content.contains(".unwrap()")) {
+    if docs
+        .iter()
+        .all(|d| d.error_snippets.iter().all(|l| !l.contains(".unwrap()")))
+    {
         patterns.push(ConventionPattern {
             regex: Regex::new(r"\.unwrap\(\)").unwrap(),
             description: "Avoid unwrap(); use proper error handling",
         });
     }
-    if docs.iter().all(|d| !d.content.contains(".expect(")) {
+    if docs
+        .iter()
+        .all(|d| d.error_snippets.iter().all(|l| !l.contains(".expect(")))
+    {
         patterns.push(ConventionPattern {
             regex: Regex::new(r"\.expect\(").unwrap(),
             description: "Avoid expect(); use proper error handling",
         });
     }
 
-    let fn_re = Regex::new(r"fn\s+\w+[^\n]*").unwrap();
-    let mut total_fns = 0;
-    let mut result_fns = 0;
-    for doc in docs {
-        for m in fn_re.find_iter(&doc.content) {
-            total_fns += 1;
-            if m.as_str().contains("->") && m.as_str().contains("Result<") {
-                result_fns += 1;
-            }
-        }
-    }
+    let total_fns: usize = docs.iter().map(|d| d.function_signatures.len()).sum();
+    let result_fns: usize = docs
+        .iter()
+        .flat_map(|d| d.function_signatures.iter())
+        .filter(|sig| sig.contains("->") && sig.contains("Result<"))
+        .count();
     let require_result = total_fns > 0 && result_fns == total_fns;
 
     (patterns, require_result)
