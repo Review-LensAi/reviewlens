@@ -1,7 +1,9 @@
 //! The command-line interface for the Intelligent Code Review Agent.
 
+use anyhow::Context;
 use clap::Parser;
 use engine::ReviewEngine;
+use std::path::PathBuf;
 
 mod commands;
 
@@ -10,12 +12,16 @@ mod commands;
 #[command(version, about, long_about = None)]
 #[command(propagate_version = true)]
 struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-
     /// Sets the verbosity level.
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
+
+    /// Path to configuration file.
+    #[arg(long, value_name = "PATH", default_value = "reviewer.toml")]
+    config: PathBuf,
+
+    #[command(subcommand)]
+    command: Commands,
 }
 
 /// The subcommands for the CLI.
@@ -38,9 +44,11 @@ async fn main() -> anyhow::Result<()> {
     // In a real app, you'd load this from a `reviewer.toml` file.
     let config = engine::config::Config {
         llm: engine::config::LlmConfig {
-            provider: "local".to_string(),
+            provider: engine::config::Provider::Local,
             model: "dummy".to_string(),
             temperature: 0.1,
+            api_key: None,
+            base_url: None,
         },
         project: engine::config::ProjectConfig {
             include: vec!["**/*".to_string()],
@@ -51,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
             secrets: true,
         },
     };
-    let engine = ReviewEngine::new(config);
+    let engine = ReviewEngine::new(config)?;
 
     // Execute the subcommand
     match cli.command {

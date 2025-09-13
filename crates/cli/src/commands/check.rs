@@ -1,7 +1,12 @@
 //! The `check` subcommand.
 
 use clap::Args;
+use engine::report::{MarkdownGenerator, ReportGenerator};
 use engine::ReviewEngine;
+use std::fs;
+use std::process::Command;
+
+use anyhow::Context;
 
 #[derive(Args, Debug)]
 pub struct CheckArgs {
@@ -25,17 +30,36 @@ pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<()> {
     println!("  Path: {}", args.path);
     println!("  Output: {}", args.output);
 
-    // In a real implementation:
-    // 1. Use git2 or a shell command to generate the diff from `args.diff`.
-    let diff_content = "diff --git a/file.txt b/file.txt\n--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-hello\n+hello world\n";
+    // 1. Generate the diff against the specified base reference.
+    let diff_output = Command::new("git")
+        .args(["-C", &args.path, "diff", &args.diff])
+        .output()
+        .with_context(|| "failed to execute git diff")?;
+    if !diff_output.status.success() {
+        anyhow::bail!("git diff command failed");
+    }
+    let diff_content =
+        String::from_utf8(diff_output.stdout).context("diff output was not valid UTF-8")?;
 
-    // 2. Call the engine to run the review.
-    engine.run(diff_content).await.map_err(|e| anyhow::anyhow!(e))?;
+    // 2. Call the engine to run the review and capture its report.
+    let report = engine
+        .run(&diff_content)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))?;
 
-    // 3. Write the report from the engine's output to `args.output`.
-    println!("\nReview complete. Report would be written to {}.", args.output);
+    // 3. Generate the markdown report and write it to `args.output`.
+    let generator = MarkdownGenerator;
+    let report_md =
+        generator
+            .generate(&report)
+            .map_err(|e| anyhow::anyhow!(e))?;
+    fs::write(&args.output, report_md)?;
+    println!("\nReview complete. Report written to {}.", args.output);
 
-    // 4. Exit with an appropriate status code for CI.
-    // For now, we'll just exit with 0.
+    // 4. Exit non-zero if any issues were found.
+    if !report.issues.is_empty() {
+        anyhow::bail!("Issues were found in the diff");
+    }
+
     Ok(())
 }
