@@ -101,6 +101,8 @@ impl Scanner for ConventionDeviationScanner {
                         file_path: file_path.to_string(),
                         line_number: i + 1,
                         severity: config.rules.convention_deviation.severity.clone(),
+                        suggested_fix: Some(pat.description.to_string()),
+                        diff: Some(format!("-{}\n+// {}", line.trim(), pat.description)),
                     });
                     matched = true;
                     break;
@@ -115,6 +117,14 @@ impl Scanner for ConventionDeviationScanner {
                         file_path: file_path.to_string(),
                         line_number: i + 1,
                         severity: config.rules.convention_deviation.severity.clone(),
+                        suggested_fix: Some(
+                            "Update function signature to return Result<T, E>".to_string(),
+                        ),
+                        diff: Some(format!(
+                            "-{}\n+{} -> Result<_, _>",
+                            line.trim(),
+                            line.trim()
+                        )),
                     });
                 }
             }

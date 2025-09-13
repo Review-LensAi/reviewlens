@@ -28,6 +28,8 @@ fn markdown_generator_with_issues() {
         file_path: "lib.rs".into(),
         line_number: 42,
         severity: Severity::High,
+        suggested_fix: Some("Apply the recommended change".into()),
+        diff: Some("-old\n+new".into()),
     };
     let report = ReviewReport {
         summary: "Issues".into(),
@@ -40,6 +42,9 @@ fn markdown_generator_with_issues() {
     let md = generator.generate(&report).unwrap();
     assert!(md.contains("Test issue"));
     assert!(md.contains("lib.rs:42"));
+    assert!(md.contains("Apply the recommended change"));
+    assert!(md.contains("Diff suggestion for `Test issue` at `lib.rs:42`"));
+    assert!(md.contains("-old"));
     assert!(md.contains("Use snake_case for variables"));
     assert!(md.contains("src/main.rs:10 - complex function"));
     assert!(md.contains("```mermaid"));

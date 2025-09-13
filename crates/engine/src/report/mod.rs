@@ -54,17 +54,30 @@ impl ReportGenerator for MarkdownGenerator {
         if sorted_issues.is_empty() {
             md.push_str("✅ No issues found.\n");
         } else {
-            md.push_str("| Severity | Title | File:Line | Description |\n");
-            md.push_str("|---|---|---|---|\n");
+            md.push_str("| Severity | Title | File:Line | Description | Suggested Fix |\n");
+            md.push_str("|---|---|---|---|---|\n");
             for issue in &sorted_issues {
                 md.push_str(&format!(
-                    "| `{:?}` | {} | `{}:{}` | {} |\n",
+                    "| `{:?}` | {} | `{}:{}` | {} | {} |\n",
                     issue.severity,
                     issue.title,
                     issue.file_path,
                     issue.line_number,
-                    issue.description
+                    issue.description,
+                    issue
+                        .suggested_fix
+                        .clone()
+                        .unwrap_or_else(|| "-".to_string())
                 ));
+            }
+
+            for issue in &sorted_issues {
+                if let Some(diff) = &issue.diff {
+                    md.push_str(&format!(
+                        "\n<details>\n<summary>Diff suggestion for `{}` at `{}:{}`</summary>\n\n```diff\n{}\n```\n</details>\n",
+                        issue.title, issue.file_path, issue.line_number, diff
+                    ));
+                }
             }
         }
 

@@ -20,6 +20,8 @@ pub struct Issue {
     pub file_path: String,
     pub line_number: usize,
     pub severity: Severity,
+    pub suggested_fix: Option<String>,
+    pub diff: Option<String>,
 }
 
 /// A trait for a scanner that checks code for specific issues.
@@ -65,6 +67,8 @@ impl Scanner for SqlInjectionGoScanner {
                         file_path: file_path.to_string(),
                         line_number: i + 1,
                         severity: config.rules.sql_injection_go.severity.clone(),
+                        suggested_fix: Some("Use parameterized queries instead of string concatenation.".to_string()),
+                        diff: Some(format!("-{}\n+db.Query(\"...\", params)", line.trim())),
                     });
                     break;
                 }
@@ -100,6 +104,16 @@ impl Scanner for HttpTimeoutsGoScanner {
                     file_path: file_path.to_string(),
                     line_number: i + 1,
                     severity: config.rules.http_timeouts_go.severity.clone(),
+                    suggested_fix: Some("Use an http.Client with a Timeout set.".to_string()),
+                    diff: Some(if uses_default_client {
+                        "-http.Get(url)\n+client := &http.Client{Timeout: 10 * time.Second}\n+client.Get(url)"
+                            .to_string()
+                    } else {
+                        format!(
+                            "-{}\n+&http.Client{{Timeout: 10 * time.Second}}",
+                            line.trim()
+                        )
+                    }),
                 });
             }
         }
