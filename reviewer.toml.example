@@ -22,8 +22,7 @@ deny = ["target/*", "**/testdata/*"]
 # "null" uses a dummy provider for offline/testing mode.
 provider = "null"
 
-# The specific model to use for analysis (e.g., "gpt-4-turbo", "claude-3-opus-20240229").
-model = "gpt-4-turbo"
+# For non-null providers, set both `model` and `api_key`.
 
 # API key for the selected provider. Required for non-null providers.
 # api_key = "YOUR_API_KEY"
@@ -41,7 +40,7 @@ model = "gpt-4-turbo"
 # --- Generation Settings ---
 [generation]
 # Controls generation behaviour such as temperature.
-temperature = 0.2
+temperature = 0
 
 
 # --- Privacy Settings ---

@@ -97,7 +97,7 @@ The agent is controlled by a `reviewer.toml` file. Copy the example file to the 
 cp reviewer.toml.example reviewer.toml
 ```
 
-Next, edit `reviewer.toml` to configure your desired LLM provider, model, project paths, and review rules. At a minimum, you must set your LLM provider and API key.
+Next, edit `reviewer.toml` to configure your desired LLM provider, model, project paths, and review rules. For any provider other than `null`, you must explicitly set both a `model` and an `api_key`.
 
 Configuration values are merged from multiple sources. The precedence is:
 
