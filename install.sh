@@ -3,7 +3,7 @@
 # This script installs the reviewer-cli for Linux and macOS.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/some-org/intelligent-code-reviewer/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/Ps1012/reviewlens/main/install.sh | sh
 #
 # The script will:
 # 1. Detect the user's OS and architecture.
@@ -14,7 +14,7 @@
 set -e # Exit on error
 
 # --- Configuration ---
-REPO="some-org/intelligent-code-reviewer"
+REPO="Ps1012/reviewlens"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="reviewer-cli"
 
