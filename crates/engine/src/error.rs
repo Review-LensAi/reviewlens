@@ -16,6 +16,9 @@ pub enum EngineError {
     #[error("LLM provider error: {0}")]
     LlmProvider(String),
 
+    #[error("Token budget exceeded: used {used} tokens but budget is {max}")]
+    TokenBudgetExceeded { used: u32, max: u32 },
+
     #[error("Scanner error: {0}")]
     Scanner(String),
 
