@@ -118,6 +118,18 @@ The project is structured as a Cargo workspace:
 -   `crates/cli`: A thin wrapper around the `engine` that provides a command-line interface.
 -   `reviewer.toml`: The configuration file for defining project rules, LLM providers, and other settings.
 
+## Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Code of Conduct
+Please see [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+## Security
+For reporting vulnerabilities, see [SECURITY.md](SECURITY.md).
+
+## License
+Licensed under the [Apache-2.0](LICENSE) license.
+
 ---
 
 *This project was bootstrapped by an AI agent.*
