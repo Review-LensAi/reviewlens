@@ -106,8 +106,33 @@ impl ReviewEngine {
             })
             .collect();
 
+        // Aggregate hotspots based on line churn.
+        let mut file_changes = Vec::new();
+        for file in &filtered_files {
+            let mut changes = 0usize;
+            for hunk in &file.hunks {
+                for line in &hunk.lines {
+                    match line {
+                        diff_parser::Line::Added(_) | diff_parser::Line::Removed(_) => {
+                            changes += 1;
+                        }
+                        diff_parser::Line::Context(_) => {}
+                    }
+                }
+            }
+            file_changes.push((file.path.clone(), changes));
+        }
+        file_changes.sort_by(|a, b| b.1.cmp(&a.1));
+        let hotspots: Vec<String> = file_changes
+            .into_iter()
+            .filter(|(_, count)| *count > 0)
+            .take(5)
+            .map(|(path, count)| format!("{path} ({count} changes)"))
+            .collect();
+
         // 2. Run configured scanners on the filtered files, limiting results to diff hunks.
         let mut issues = Vec::new();
+        let mut code_quality = Vec::new();
         for file in filtered_files {
             let content = fs::read_to_string(&file.path)?;
             let mut changed_lines = std::collections::HashSet::new();
@@ -130,7 +155,16 @@ impl ReviewEngine {
             for scanner in &self.scanners {
                 let mut found = scanner.scan(&file.path, &content, &self.config)?;
                 found.retain(|issue| changed_lines.contains(&issue.line_number));
-                issues.append(&mut found);
+                if scanner.name() == "Convention Deviation Scanner" {
+                    for issue in found {
+                        code_quality.push(format!(
+                            "{}:{} - {}",
+                            issue.file_path, issue.line_number, issue.description
+                        ));
+                    }
+                } else {
+                    issues.append(&mut found);
+                }
             }
         }
 
@@ -218,8 +252,8 @@ impl ReviewEngine {
         let report = ReviewReport {
             summary: llm_response.content,
             issues,
-            code_quality: Vec::new(),
-            hotspots: Vec::new(),
+            code_quality,
+            hotspots,
             mermaid_diagram: None,
             config: self.config.clone(),
         };
