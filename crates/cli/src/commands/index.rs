@@ -1,8 +1,11 @@
 //! The `index` subcommand.
 
 use clap::Args;
+use engine::config::DEFAULT_INDEX_PATH;
 use engine::rag::index_repository;
 use engine::ReviewEngine;
+use std::fs;
+use std::path::Path;
 
 #[derive(Args, Debug)]
 pub struct IndexArgs {
@@ -15,7 +18,7 @@ pub struct IndexArgs {
     pub force: bool,
 
     /// The path to write the generated index to.
-    #[arg(long, default_value = "index.json")]
+    #[arg(long, default_value = DEFAULT_INDEX_PATH)]
     pub output: String,
 }
 
