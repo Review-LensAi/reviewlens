@@ -8,9 +8,11 @@ use async_trait::async_trait;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
+use std::time::UNIX_EPOCH;
 use walkdir::WalkDir;
 
 /// Represents a single indexed document along with extracted metadata.
@@ -38,6 +40,9 @@ pub struct Document {
     /// `expect`, or `Result` usage).
     #[serde(default)]
     pub error_snippets: Vec<String>,
+    /// Last modification time of the file in nanoseconds since Unix epoch.
+    #[serde(default)]
+    pub modified: u64,
 }
 
 /// Generate a simple n-gram embedding for the provided text.
@@ -79,7 +84,9 @@ fn extract_function_signatures(content: &str) -> Vec<String> {
 fn extract_log_patterns(content: &str) -> Vec<String> {
     content
         .lines()
-        .filter(|line| line.contains("log::") || line.contains("println!") || line.contains("eprintln!"))
+        .filter(|line| {
+            line.contains("log::") || line.contains("println!") || line.contains("eprintln!")
+        })
         .map(|l| l.trim().to_string())
         .collect()
 }
@@ -238,8 +245,9 @@ impl InMemoryVectorStore {
 /// Indexes all files under `path` and populates an `InMemoryVectorStore`.
 ///
 /// If `force` is `false` and an index already exists at `output`, the existing
-/// index is loaded from disk instead of re-indexing the repository. When a new
-/// index is built, it is persisted to the given `output` path.
+/// index is loaded from disk and only files whose modification times have
+/// changed are re-processed. When a new or updated index is built, it is
+/// persisted to the given `output` path.
 pub async fn index_repository<P, Q>(path: P, output: Q, force: bool) -> Result<InMemoryVectorStore>
 where
     P: AsRef<Path>,
@@ -253,31 +261,59 @@ where
         force
     );
 
-    if !force && output_ref.exists() {
+    let mut store = if !force && output_ref.exists() {
         log::info!("Loading existing index from {}", output_ref.display());
-        return InMemoryVectorStore::load_from_disk(output_ref);
-    }
+        InMemoryVectorStore::load_from_disk(output_ref)?
+    } else {
+        InMemoryVectorStore::default()
+    };
 
-    let mut store = InMemoryVectorStore::default();
+    let mut existing = std::mem::take(&mut store.documents)
+        .into_iter()
+        .map(|d| (d.filename.clone(), d))
+        .collect::<HashMap<_, _>>();
+
+    let mut new_documents = Vec::new();
 
     for entry in WalkDir::new(path_ref).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
+            let filename = entry.path().display().to_string();
+            let modified_time = fs::metadata(entry.path())?
+                .modified()?
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default();
+            let modified =
+                modified_time.as_secs() * 1_000_000_000 + u64::from(modified_time.subsec_nanos());
+
+            if !force {
+                if let Some(doc) = existing.get(&filename) {
+                    if doc.modified == modified {
+                        new_documents.push(doc.clone());
+                        existing.remove(&filename);
+                        continue;
+                    }
+                }
+            }
+
             let content = fs::read_to_string(entry.path())?;
             let embedding = ngram_embedding(&content);
             let function_signatures = extract_function_signatures(&content);
             let log_patterns = extract_log_patterns(&content);
             let error_snippets = extract_error_snippets(&content);
             let doc = Document {
-                filename: entry.path().display().to_string(),
+                filename: filename.clone(),
                 content,
                 embedding,
                 function_signatures,
                 log_patterns,
                 error_snippets,
+                modified,
             };
-            store.add(doc).await?;
+            new_documents.push(doc);
         }
     }
+
+    store.documents = new_documents;
 
     if let Some(parent) = output_ref.parent() {
         if !parent.as_os_str().is_empty() {

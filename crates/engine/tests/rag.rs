@@ -1,4 +1,6 @@
-use engine::rag::{index_repository, Document, InMemoryVectorStore, RagContextRetriever, VectorStore};
+use engine::rag::{
+    index_repository, Document, InMemoryVectorStore, RagContextRetriever, VectorStore,
+};
 use std::env;
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -15,6 +17,7 @@ async fn retrieves_context_from_saved_store() {
         function_signatures: vec![],
         log_patterns: vec![],
         error_snippets: vec![],
+        modified: 0,
     };
     store.add(doc).await.unwrap();
 
@@ -44,7 +47,8 @@ async fn indexes_repository_and_saves_to_disk() {
     let dir = tempdir().unwrap();
     let file_path = dir.path().join("file.txt");
     fs::write(&file_path, "content").unwrap();
-    let index_path = dir.path().join("index.json");
+    let index_dir = tempdir().unwrap();
+    let index_path = index_dir.path().join("index.json");
 
     let store = index_repository(dir.path(), &index_path, false)
         .await
@@ -55,7 +59,7 @@ async fn indexes_repository_and_saves_to_disk() {
 }
 
 #[tokio::test]
-async fn uses_cached_index_when_not_forced() {
+async fn updates_index_incrementally() {
     let dir = tempdir().unwrap();
     let file_a = dir.path().join("a.txt");
     fs::write(&file_a, "a").unwrap();
@@ -72,13 +76,22 @@ async fn uses_cached_index_when_not_forced() {
     let file_b = dir.path().join("b.txt");
     fs::write(&file_b, "b").unwrap();
 
-    // Without force, the cached index should be used (still 1 document)
-    let cached = index_repository(dir.path(), &index_path, false)
+    // Re-index without force should pick up the new file
+    let updated = index_repository(dir.path(), &index_path, false)
         .await
         .unwrap();
-    assert_eq!(cached.len(), 1);
+    assert_eq!(updated.len(), 2);
 
-    // Forcing rebuild should pick up the new file
+    // Modify an existing file and ensure the content is refreshed
+    fs::write(&file_a, "a changed").unwrap();
+    let refreshed = index_repository(dir.path(), &index_path, false)
+        .await
+        .unwrap();
+    assert_eq!(refreshed.len(), 2);
+    let json = fs::read_to_string(&index_path).unwrap();
+    assert!(json.contains("a changed"));
+
+    // Forcing rebuild should produce the same result
     let rebuilt = index_repository(dir.path(), &index_path, true)
         .await
         .unwrap();
