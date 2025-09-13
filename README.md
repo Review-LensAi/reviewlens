@@ -55,18 +55,18 @@ cargo install reviewer-cli
 
 ### With Docker
 
-For a containerized environment, you can use Docker.
+For a containerized environment, pull the pre-built image from GitHub's container registry.
 
-1.  **Build the image:**
-    ```bash
-    docker build -t reviewer-cli .
-    ```
+```bash
+docker pull ghcr.io/some-org/reviewer-cli:latest
+docker run --rm -v "$(pwd):/work" ghcr.io/some-org/reviewer-cli:latest check --base-ref main
+```
 
-2.  **Run the container:**
-    You'll need to mount your project directory and pass your configuration.
-    ```bash
-    docker run --rm -v "$(pwd):/work" reviewer-cli check --base-ref main
-    ```
+You can also build the image locally:
+
+```bash
+docker build -t reviewer-cli .
+```
 
 ### From Source
 
