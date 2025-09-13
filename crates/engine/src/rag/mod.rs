@@ -5,24 +5,121 @@
 
 use crate::error::{EngineError, Result};
 use async_trait::async_trait;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
 use std::fs;
+use std::hash::{Hash, Hasher};
 use std::path::Path;
 use walkdir::WalkDir;
 
-/// Represents a single indexed document along with minimal metadata.
+/// Represents a single indexed document along with extracted metadata.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Document {
+    /// Name of the file on disk.
     pub filename: String,
+    /// Original file content. Stored to allow scanners to reason about
+    /// conventions present in the repository.
     pub content: String,
-    pub token_count: usize,
+    /// Lightweight n-gram embedding representing the file's content.
+    ///
+    /// This embedding is computed using a simple hashing trick to bucket
+    /// token n-grams into a fixed-size vector. It enables inexpensive
+    /// similarity search without relying on heavyweight language models.
+    #[serde(default)]
+    pub embedding: Vec<f32>,
+    /// All function signatures discovered in this file.
+    #[serde(default)]
+    pub function_signatures: Vec<String>,
+    /// Lines that contain logging macros such as `log::info!`.
+    #[serde(default)]
+    pub log_patterns: Vec<String>,
+    /// Lines that contain common error-handling patterns (`unwrap`,
+    /// `expect`, or `Result` usage).
+    #[serde(default)]
+    pub error_snippets: Vec<String>,
+}
+
+/// Generate a simple n-gram embedding for the provided text.
+///
+/// The embedding is created by hashing each token bigram into a fixed-size
+/// vector. The resulting vector is L1 normalised so that documents of
+/// different lengths can still be compared.
+fn ngram_embedding(text: &str) -> Vec<f32> {
+    const N: usize = 2; // bigrams
+    const DIM: usize = 128;
+    let mut vec = vec![0f32; DIM];
+    let tokens: Vec<&str> = text.split_whitespace().collect();
+    if tokens.len() < N {
+        return vec;
+    }
+    for i in 0..=tokens.len() - N {
+        let ngram = tokens[i..i + N].join(" ");
+        let mut hasher = DefaultHasher::new();
+        ngram.hash(&mut hasher);
+        let idx = (hasher.finish() as usize) % DIM;
+        vec[idx] += 1.0;
+    }
+    let sum: f32 = vec.iter().sum();
+    if sum > 0.0 {
+        for v in &mut vec {
+            *v /= sum;
+        }
+    }
+    vec
+}
+
+fn extract_function_signatures(content: &str) -> Vec<String> {
+    let re = Regex::new(r"(?m)^\s*fn\s+\w+[^\n]*").unwrap();
+    re.find_iter(content)
+        .map(|m| m.as_str().trim().to_string())
+        .collect()
+}
+
+fn extract_log_patterns(content: &str) -> Vec<String> {
+    content
+        .lines()
+        .filter(|line| line.contains("log::") || line.contains("println!") || line.contains("eprintln!"))
+        .map(|l| l.trim().to_string())
+        .collect()
+}
+
+fn extract_error_snippets(content: &str) -> Vec<String> {
+    content
+        .lines()
+        .filter(|line| {
+            line.contains(".unwrap()")
+                || line.contains(".expect(")
+                || line.contains("Result<")
+                || line.contains("Err(")
+        })
+        .map(|l| l.trim().to_string())
+        .collect()
+}
+
+fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    if a.is_empty() || b.is_empty() || a.len() != b.len() {
+        return 0.0;
+    }
+    let mut dot = 0.0;
+    let mut norm_a = 0.0;
+    let mut norm_b = 0.0;
+    for (x, y) in a.iter().zip(b) {
+        dot += x * y;
+        norm_a += x * x;
+        norm_b += y * y;
+    }
+    if norm_a == 0.0 || norm_b == 0.0 {
+        return 0.0;
+    }
+    dot / (norm_a.sqrt() * norm_b.sqrt())
 }
 
 /// A trait for a vector store that can store and retrieve embeddings.
 #[async_trait]
 pub trait VectorStore {
-    /// Adds a document and its vector embedding to the store.
-    async fn add(&mut self, document: Document, embedding: Vec<f32>) -> Result<()>;
+    /// Adds a document (which already contains its embedding) to the store.
+    async fn add(&mut self, document: Document) -> Result<()>;
 
     /// Searches for the most similar documents to a given query vector.
     async fn search(&self, query_embedding: Vec<f32>, top_k: usize) -> Result<Vec<Document>>;
@@ -56,9 +153,8 @@ impl RagContextRetriever {
 
     pub async fn retrieve(&self, query: &str) -> Result<String> {
         log::debug!("Retrieving RAG context for query: {}", query);
-        // 1. Generate a tiny embedding for the query using token counts.
-        let token_count = query.split_whitespace().count() as f32;
-        let embedding = vec![token_count];
+        // 1. Generate a lightweight embedding for the query.
+        let embedding = ngram_embedding(query);
 
         // 2. Search the vector store.
         let top_k = 5;
@@ -99,15 +195,25 @@ impl InMemoryVectorStore {
 
 #[async_trait]
 impl VectorStore for InMemoryVectorStore {
-    /// Stores the document in memory. Embeddings are ignored in this simple example.
-    async fn add(&mut self, document: Document, _embedding: Vec<f32>) -> Result<()> {
+    /// Stores the document in memory along with its embedding.
+    async fn add(&mut self, document: Document) -> Result<()> {
         self.documents.push(document);
         Ok(())
     }
 
-    /// Returns up to `top_k` documents from the in-memory store.
-    async fn search(&self, _query_embedding: Vec<f32>, top_k: usize) -> Result<Vec<Document>> {
-        Ok(self.documents.iter().take(top_k).cloned().collect())
+    /// Performs a naive cosine similarity search over stored embeddings.
+    async fn search(&self, query_embedding: Vec<f32>, top_k: usize) -> Result<Vec<Document>> {
+        let mut scored: Vec<(f32, Document)> = self
+            .documents
+            .iter()
+            .cloned()
+            .map(|doc| {
+                let score = cosine_similarity(&query_embedding, &doc.embedding);
+                (score, doc)
+            })
+            .collect();
+        scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+        Ok(scored.into_iter().take(top_k).map(|(_, d)| d).collect())
     }
 }
 
@@ -157,13 +263,19 @@ where
     for entry in WalkDir::new(path_ref).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let content = fs::read_to_string(entry.path())?;
-            let tokens = content.split_whitespace().count();
+            let embedding = ngram_embedding(&content);
+            let function_signatures = extract_function_signatures(&content);
+            let log_patterns = extract_log_patterns(&content);
+            let error_snippets = extract_error_snippets(&content);
             let doc = Document {
                 filename: entry.path().display().to_string(),
                 content,
-                token_count: tokens,
+                embedding,
+                function_signatures,
+                log_patterns,
+                error_snippets,
             };
-            store.add(doc, vec![tokens as f32]).await?;
+            store.add(doc).await?;
         }
     }
 

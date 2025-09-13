@@ -11,9 +11,12 @@ async fn retrieves_context_from_saved_store() {
     let doc = Document {
         filename: "doc.txt".into(),
         content: "example context".into(),
-        token_count: 2,
+        embedding: vec![1.0; 128],
+        function_signatures: vec![],
+        log_patterns: vec![],
+        error_snippets: vec![],
     };
-    store.add(doc, vec![2.0]).await.unwrap();
+    store.add(doc).await.unwrap();
 
     // Persist the store to disk
     let mut path = env::temp_dir();

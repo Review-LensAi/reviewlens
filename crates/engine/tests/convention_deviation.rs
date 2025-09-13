@@ -1,14 +1,51 @@
 use engine::config::Config;
 use engine::scanner::{ConventionDeviationScanner, Scanner};
+use regex::Regex;
 use serde_json::json;
 use std::io::Write;
 use tempfile::NamedTempFile;
+
+fn extract_function_signatures(content: &str) -> Vec<String> {
+    let re = Regex::new(r"(?m)^\s*fn\s+\w+[^\n]*").unwrap();
+    re.find_iter(content)
+        .map(|m| m.as_str().trim().to_string())
+        .collect()
+}
+
+fn extract_log_patterns(content: &str) -> Vec<String> {
+    content
+        .lines()
+        .filter(|l| l.contains("log::") || l.contains("println!") || l.contains("eprintln!"))
+        .map(|l| l.trim().to_string())
+        .collect()
+}
+
+fn extract_error_snippets(content: &str) -> Vec<String> {
+    content
+        .lines()
+        .filter(|l| {
+            l.contains(".unwrap()")
+                || l.contains(".expect(")
+                || l.contains("Result<")
+                || l.contains("Err(")
+        })
+        .map(|l| l.trim().to_string())
+        .collect()
+}
 
 fn build_index(docs: &[(&str, &str)]) -> NamedTempFile {
     let mut file = NamedTempFile::new().expect("create temp index");
     let documents: Vec<_> = docs
         .iter()
-        .map(|(f, c)| json!({ "filename": f, "content": c }))
+        .map(|(f, c)| {
+            json!({
+                "filename": f,
+                "content": c,
+                "function_signatures": extract_function_signatures(c),
+                "log_patterns": extract_log_patterns(c),
+                "error_snippets": extract_error_snippets(c),
+            })
+        })
         .collect();
     let data = json!({ "documents": documents });
     file
