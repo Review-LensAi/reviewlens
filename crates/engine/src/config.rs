@@ -4,6 +4,7 @@
 //! `reviewer.toml` configuration file.
 
 use crate::error::{EngineError, Result};
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -68,7 +69,6 @@ impl Default for LlmConfig {
         }
     }
 }
-
 
 // As per PRD: `[budget.tokens]` section
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Default)]
@@ -144,7 +144,7 @@ fn default_include() -> Vec<String> {
 }
 
 // As per PRD: `[rules]` section with severity
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, ValueEnum)]
 #[serde(rename_all = "kebab-case")]
 pub enum Severity {
     Critical,
@@ -205,7 +205,6 @@ pub struct RulesConfig {
     #[serde(default)]
     pub convention_deviation: RuleConfig,
 }
-
 
 impl Config {
     /// Loads configuration from a TOML file.
