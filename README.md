@@ -128,6 +128,11 @@ You can run the agent in your CI pipeline to automatically review merge requests
 
 See the `docs/ci/` directory for example configurations for GitHub Actions and GitLab CI.
 
+## Documentation
+- [Quickstart](docs/quickstart.md) – install and run the agent, including CI setup and privacy defaults.
+- [Configuration](docs/config.md) – list of options and default privacy settings.
+- [Troubleshooting](docs/troubleshooting.md) – common errors and fixes.
+
 ## Architecture
 
 The project is structured as a Cargo workspace:
