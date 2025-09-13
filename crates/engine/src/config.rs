@@ -223,6 +223,8 @@ pub struct RulesConfig {
     pub http_timeouts_go: RuleConfig,
     #[serde(default)]
     pub convention_deviation: RuleConfig,
+    #[serde(default)]
+    pub server_xss_go: RuleConfig,
 }
 
 impl Config {

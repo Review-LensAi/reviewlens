@@ -71,3 +71,7 @@ severity = "medium"
 enabled = true
 severity = "medium"
 
+[rules.server-xss-go]
+enabled = true
+severity = "medium"
+
