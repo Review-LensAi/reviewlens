@@ -9,6 +9,8 @@ code_review:
   script:
     # Ensure git is available for diffing
     - apt-get update && apt-get install -y git
+    # Run tests
+    - cargo test --all
     # Build the CLI
     - cargo build --release
     # Run the review against the target branch of the merge request
