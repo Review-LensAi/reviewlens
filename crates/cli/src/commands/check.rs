@@ -1,6 +1,7 @@
 //! The `check` subcommand.
 
 use clap::Args;
+use engine::config::Severity;
 use engine::report::{MarkdownGenerator, ReportGenerator};
 use engine::ReviewEngine;
 use std::fs;
@@ -21,6 +22,10 @@ pub struct CheckArgs {
     /// The path to write the review report to.
     #[arg(short, long, default_value = "review_report.md")]
     pub output: String,
+
+    /// Minimum issue severity that will trigger a non-zero exit.
+    #[arg(long, value_enum)]
+    pub fail_on: Option<Severity>,
 }
 
 /// Executes the `check` subcommand.
@@ -29,6 +34,7 @@ pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<()> {
     println!("  Diff base: {}", args.diff);
     println!("  Path: {}", args.path);
     println!("  Output: {}", args.output);
+    println!("  Fail on: {:?}", args.fail_on);
 
     // 1. Generate the diff against the specified base reference.
     let diff_output = Command::new("git")
@@ -55,9 +61,21 @@ pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<()> {
     fs::write(&args.output, &report_md)?;
     println!("\nReview complete. Report written to {}.", args.output);
 
-    // 4. Exit non-zero if any issues were found.
-    if !report.issues.is_empty() {
-        anyhow::bail!("Issues were found in the diff");
+    // 4. Exit non-zero based on severity threshold.
+    if let Some(threshold) = args.fail_on {
+        let max_severity = report
+            .issues
+            .iter()
+            .map(|issue| issue.severity.clone())
+            .max();
+        if let Some(max) = max_severity {
+            if max >= threshold {
+                anyhow::bail!(
+                    "Issues of severity {:?} or higher were found in the diff",
+                    threshold
+                );
+            }
+        }
     }
 
     Ok(())
