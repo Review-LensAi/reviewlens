@@ -55,7 +55,7 @@ For a containerized environment, you can use Docker.
 2.  **Run the container:**
     You'll need to mount your project directory and pass your configuration.
     ```bash
-    docker run --rm -v "$(pwd):/work" reviewer-cli check --diff main
+    docker run --rm -v "$(pwd):/work" reviewer-cli check --base-ref main
     ```
 
 ### From Source
@@ -96,7 +96,7 @@ The primary command is `reviewer-cli check`. It analyzes the difference between 
 Run a review from the root of your project:
 ```bash
 # Run a review against the 'main' branch
-reviewer-cli check --diff main
+reviewer-cli check --base-ref main
 ```
 
 The review report will be saved to `review_report.md` by default. You can view it with:
