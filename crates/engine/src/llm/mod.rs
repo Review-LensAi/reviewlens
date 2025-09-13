@@ -64,7 +64,7 @@ pub fn create_llm_provider(config: &Config) -> Result<Box<dyn LlmProvider>> {
                 config.llm.model.clone().ok_or_else(|| {
                     EngineError::Config("Missing model for OpenAI provider".into())
                 })?;
-            let temperature = config.generation.temperature.unwrap_or(0.1);
+            let temperature = config.generation.temperature.unwrap_or(0.0);
             Ok(Box::new(openai::OpenAiProvider::new(
                 api_key,
                 model,
@@ -81,7 +81,7 @@ pub fn create_llm_provider(config: &Config) -> Result<Box<dyn LlmProvider>> {
             let model = config.llm.model.clone().ok_or_else(|| {
                 EngineError::Config("Missing model for Anthropic provider".into())
             })?;
-            let temperature = config.generation.temperature.unwrap_or(0.1);
+            let temperature = config.generation.temperature.unwrap_or(0.0);
             Ok(Box::new(anthropic::AnthropicProvider::new(
                 api_key,
                 model,
@@ -99,7 +99,7 @@ pub fn create_llm_provider(config: &Config) -> Result<Box<dyn LlmProvider>> {
                 config.llm.model.clone().ok_or_else(|| {
                     EngineError::Config("Missing model for DeepSeek provider".into())
                 })?;
-            let temperature = config.generation.temperature.unwrap_or(0.1);
+            let temperature = config.generation.temperature.unwrap_or(0.0);
             Ok(Box::new(deepseek::DeepSeekProvider::new(
                 api_key,
                 model,
