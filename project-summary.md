@@ -1,67 +1,67 @@
-Project Summary — Intelligent Code Review, Debugging & Security Agent (CLI-first)
-Vision (North Star)
-Make code review 10× faster and safer by putting an expert AI reviewer directly in the developer loop—local, CI, and PR—catching critical issues early and explaining fixes clearly.
-Problem We’re Solving
-PRs are bigger (AI-assisted coding), human reviewers are overloaded, and security flaws slip through.
-Existing tools skew passive (linters/scanners) and lack deep repo context or actionable, teachable feedback.
-Core Hypothesis
-An AI agent with deep codebase context (RAG) + targeted security analysis (SAST-lite) can consistently surface high-impact issues and cut review time from hours to minutes—without spamming devs.
-Target Users
-Priya (Senior Reviewer): wants high-signal highlights and architectural red flags.
-Leo (Junior Submitter): wants immediate, concrete feedback and fixes.
-MVP Scope (CLI-first)
-Modes
-check (local/CI): analyze working tree or --diff main.
-Outputs: Markdown report (stdout + review_report.md) with:
-Security findings (top OWASP 5), 2) Context-aware code quality deviations,
-High-level PR summary, 4) Suggested fixes, 5) Optional sequence diagram.
-Capabilities
-SAST-lite: detect SQLi, XSS, command injection, insecure deserialization, SSRF patterns (language-aware where possible).
-Context (RAG-lite): index main branch; detect deviations (error handling, logging, layering, naming).
-Summarization: natural-language overview + “files to focus” + sequence diagram for complex flows.
-CI-friendly: deterministic exit codes (0 clean, 1 issues, 2 internal error) and JSON export flag for future bot wrappers.
-Initial Language Focus (suggested)
-JS/TS, Python, Go (extensible rules; language-agnostic heuristics for everything else).
-Non-Functional MVP Targets
-Performance: first report within ≤5 minutes for typical PRs (<1k added LOC).
-Accuracy: <15% false positive rate on security flags (tracked via suppression feedback).
-Usability: comments and suggestions are copy-paste-able, minimal jargon.
+Intelligent Code Review Agent — Project Goals (MVP)
+Vision
+A context-aware, security-first code review agent that runs locally or in CI, summarizes changes, flags real issues (not noise), and suggests precise fixes—without vendor lock-in to any single LLM.
+Primary Objectives
+Slash review time while improving quality and security.
+Catch high-impact issues early: OWASP Top 5, dangerous patterns, secret/credential leaks.
+Understand codebase context (RAG) to give suggestions that match project conventions.
+Deliver actionable output: concise PR summary, hotspots, concrete diffs/suggestions.
+Be provider-agnostic: support GPT, Claude, DeepSeek, and self-hosted models behind a clean abstraction.
+Non–Vendor-Locked LLM Strategy
+Provider-agnostic interface: a single LLM “driver” trait + adapters (OpenAI, Anthropic, DeepSeek, OpenRouter/compatible, self-hosted via vLLM/TGI/LiteLLM).
+Config over code: choose model/provider via reviewer.toml / env vars; easy multi-provider fallback & routing.
+Prompt & tool schema versioning: versioned prompts/templates, function-calling/tool schemas kept model-neutral.
+Offline/air-gapped mode: allow pure static analysis + optional local model usage (no code leaves the machine).
+Cost/latency controls: max tokens, temperature, retries, circuit breakers, and per-provider budgets.
+What We’re Building First (CLI-First MVP)
+CLI command: reviewer check --path . --diff main
+Outputs:
+review_report.md (summary, risks, suggested fixes, Mermaid diagrams)
+Exit codes for CI gating (0 clean, 1 issues)
+Core capabilities:
+Security scan (SAST-lite): flag top OWASP families + secrets/credentials patterns.
+Context-aware checks (RAG-lite): index main branch, detect pattern deviations (error handling, logging, boundary checks, API usage).
+PR summary & hotspots: what changed, why it matters, where to focus.
+Fix suggestions: minimal, reviewable diffs with rationale.
+Performance guardrail: first pass finishes < 5 minutes on typical PRs.
+Quality guardrail: <15% false positive rate target on curated test PRs.
+Out of Scope for MVP (Post-MVP)
+GitHub/GitLab inline auto-comments & Checks API (we’ll post reports first via CI; bot later).
+DAST, full dependency SCA, and wide multi-language coverage (start with 1–2 languages + generic patterns).
+Autonomous code changes/auto-commit (gated for later once trust is established).
+IDE plugins (after CLI is solid).
 Success Metrics (MVP)
-Adoption: ≥70% of PRs in pilot repos run the CLI in CI.
-Speed: median time-to-first-feedback ≤3 minutes in CI.
-Signal: ≥60% of surfaced issues acknowledged (fixed or justified).
-Quality: false-positive rate <15% on security rules, <20% overall.
-Value: reviewer time per PR reduced by ≥30% (self-reported).
-Out of Scope (Post-MVP)
-GitHub/GitLab inline bot + Checks API (will wrap CLI next).
-DAST, dependency scanning, SBOM.
-Auto-commit fixes via bot.
-Multi-repo monorepo graph analysis and cross-service diff impact.
-Product Principles
-Local-first & privacy-aware: default to running locally/CI; no code leaves environment unless configured.
-Explain, don’t just alert: every finding includes why it matters + safe fix.
-Low noise, high signal: rank by risk; collapse nits; deduplicate across files.
-Composable: core engine is a library; CLI and integrations are thin wrappers.
+Adoption: # repos running CLI in CI.
+Time to feedback: P50 end-to-end under 5 minutes.
+Signal quality: Reviewer “useful” ratings ≥ 4/5; false positives ≤ 15%.
+Defect catch rate: % of issues caught pre-merge vs baseline.
+Security value: # critical/security issues blocked pre-merge.
+Architecture Principles
+Separation of concerns: engine (library) ⟷ cli (thin wrapper) ⟷ integrations (actions/bots later).
+Pluggable providers: LLM, embeddings, vector store (e.g., Tantivy/Qdrant), scanners (Semgrep-style, regex/rules).
+Deterministic CI mode: pinned model versions, low temperature, reproducible prompts.
+Privacy & safety by default:
+Path allowlists/denylists, redaction of secrets before LLM calls, optional “no external calls” mode.
+Local cache for embeddings/index; clear data-retention story.
+Initial Deliverables (Phase 1)
+Docs: README with goals, quick start, config examples.
+Configs: reviewer.toml (model, provider, thresholds, redaction rules).
+Engine:
+Diff ingestion + changed-code focus
+RAG-lite indexer (main branch)
+Security & pattern rules (extensible ruleset)
+Report generator (Markdown + Mermaid)
+LLM abstraction + providers (GPT, Claude, DeepSeek + a “null” local mode)
+CLI: check, index, print-config, version
+CI examples: GitHub Action & GitLab CI templates (run CLI, upload artifact)
+Near-Term Roadmap
+MVP CLI (local & CI) → validate core hypothesis.
+Report posting via GitHub Action/GitLab job (paste Markdown to PR).
+Bot/Checks integration (inline comments, status checks).
+Remediation mode (optional patch generation with guardrails).
+Language expansion & richer rulesets; eval harness & benchmark suite.
 Risks & Mitigations
-Noise risk: start narrow (top OWASP), strict rule gating, allow inline # reviewer:ignore with audit trail.
-Perf on large repos: cache index, incremental diffs, parallel scanning.
-Language drift: rules plugin system; community rule packs.
-Trust: dry-run mode, clear provenance for suggestions.
-Deliverables (MVP)
-reviewer-core (Rust lib): indexing, analyzers, ranking, renderers.
-reviewer CLI: flags, IO, exit codes.
-Report schema: Markdown + optional JSON.
-Starter rule packs: security + conventions for JS/TS, Python, Go.
-Docs: quickstart, CI examples, suppression/ignore policy, contribution guide.
-Sample repos for demos and regression tests.
-Definition of Done (CLI MVP)
-Runs locally and in GitHub Actions/GitLab CI with one line.
-Generates actionable review_report.md covering: summary, top risks, line refs, fixes, diagram (when applicable).
-Stable exit codes; non-zero on high/critical issues.
-Config file: include/exclude paths, rule toggles, severity thresholds.
-Benchmarked on 3 real OSS repos; metrics published in README.
-Near-Term Roadmap (pragmatic)
-Week 1–2: workspace setup, core library API, repo indexer, basic diff, Markdown renderer.
-Week 3–4: OWASP-5 detectors (language-aware), ranking, config, JSON export, perf pass.
-Week 5: RAG-lite conventions detector, PR summary, sequence diagram generator.
-Week 6: CI templates, docs, sample repos, public alpha.
+Hallucinations / bad fixes → require diffs + rationale, keep temperature low, rule-first then LLM-assist, human-in-the-loop.
+Provider outages / rate limits → multi-provider fallback, caching, backoff, budget limits.
+Leakage/privacy → redaction, allowlists, local-only mode, explicit consent in CI.
+Noise → tight ruleset, confidence thresholds, “only changed lines” focus, continuous eval against golden PRs.
