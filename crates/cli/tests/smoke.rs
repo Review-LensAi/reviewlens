@@ -15,7 +15,14 @@ fn print_config_command_produces_valid_json() {
     cmd.assert().success();
 
     let stdout = String::from_utf8(output.stdout).unwrap();
-    let json: Value = serde_json::from_str(&stdout).expect("stdout should be valid JSON");
+    let mut parts = stdout.splitn(2, "Compiled providers:");
+    let json_part = parts.next().unwrap().trim();
+    let json: Value = serde_json::from_str(json_part).expect("stdout should start with valid JSON");
+    if let Some(provider_line) = parts.next() {
+        assert!(provider_line.contains("null"));
+    } else {
+        panic!("expected providers list in output");
+    }
 
     assert_eq!(json["llm"]["provider"], "null");
     assert_eq!(json["privacy"]["redaction"]["enabled"], true);

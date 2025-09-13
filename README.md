@@ -34,6 +34,16 @@ You can download pre-compiled binaries directly from the [GitHub Releases page](
 
 Download the appropriate archive for your operating system, extract it, and place the `reviewer-cli` (or `reviewer-cli.exe`) binary in a directory included in your system's `PATH`.
 
+Each release also provides a `.sha256` checksum and a `.sig` signature file generated with [cosign](https://github.com/sigstore/cosign). After downloading an archive, you can verify its integrity and authenticity:
+
+```bash
+# Verify the checksum
+sha256sum -c reviewer-cli-<TARGET>.tar.gz.sha256
+
+# Verify the signature (requires cosign)
+cosign verify-blob --signature reviewer-cli-<TARGET>.tar.gz.sig reviewer-cli-<TARGET>.tar.gz
+```
+
 ### With `cargo` (Requires Rust)
 
 If you have the Rust toolchain installed, you can build and install `reviewer-cli` from crates.io.
@@ -89,6 +99,14 @@ cp reviewer.toml.example reviewer.toml
 
 Next, edit `reviewer.toml` to configure your desired LLM provider, model, project paths, and review rules. At a minimum, you must set your LLM provider and API key.
 
+Configuration values are merged from multiple sources. The precedence is:
+
+1. CLI flags
+2. Environment variables (prefixed with `REVIEWER_`)
+3. Values from `reviewer.toml`
+
+For example, `--llm-provider anthropic` overrides `REVIEWER_LLM_PROVIDER`, which in turn overrides the `llm.provider` value in the configuration file.
+
 ### 2. Usage
 
 The primary command is `reviewer-cli check`. It analyzes the difference between your current branch and a base branch (e.g., `main`).
@@ -122,6 +140,18 @@ The project is structured as a Cargo workspace:
 
 The engine uses the [`patch`](https://crates.io/crates/patch) crate to parse diffs in the unified format. It understands
 standard text diffs, file renames, binary file changes, and multiple hunks within a single file.
+
+## Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Code of Conduct
+Please see [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+## Security
+For reporting vulnerabilities, see [SECURITY.md](SECURITY.md).
+
+## License
+Licensed under the [Apache-2.0](LICENSE) license.
 
 ---
 

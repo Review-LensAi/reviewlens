@@ -1,10 +1,12 @@
 # Example configuration for the Intelligent Code Review Agent.
 # Copy this file to `reviewer.toml` and customize it for your project.
+# Values here can be overridden by environment variables (prefixed with `REVIEWER_`)
+# and by CLI flags. Precedence: CLI flags > env vars > this file.
 
 # --- Paths Configuration ---
 # Optional path to a pre-built vector index for Retrieval-Augmented Generation.
 # If provided, the engine will load this index at startup.
-index-path = "index.json"
+index-path = ".reviewer/index/index.json"
 
 [paths]
 # Paths to include (allow) in the analysis. Globs are supported.
@@ -66,6 +68,10 @@ enabled = true
 severity = "medium"
 
 [rules.convention-deviation]
+enabled = true
+severity = "medium"
+
+[rules.server-xss-go]
 enabled = true
 severity = "medium"
 

@@ -8,8 +8,8 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-/// Default filename for the RAG index.
-pub const DEFAULT_INDEX_PATH: &str = "index.json";
+/// Default path for the RAG index file.
+pub const DEFAULT_INDEX_PATH: &str = ".reviewer/index/index.json";
 
 // As per PRD section 9
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
@@ -34,7 +34,7 @@ pub struct Config {
 }
 
 // As per PRD: `null | openai | anthropic | deepseek`
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, ValueEnum)]
 #[serde(rename_all = "kebab-case")]
 pub enum Provider {
     #[serde(rename = "null")]
@@ -42,6 +42,18 @@ pub enum Provider {
     Openai,
     Anthropic,
     Deepseek,
+}
+
+impl Provider {
+    /// Returns the kebab-case name of the provider.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Provider::Null => "null",
+            Provider::Openai => "openai",
+            Provider::Anthropic => "anthropic",
+            Provider::Deepseek => "deepseek",
+        }
+    }
 }
 
 // Default provider is "null"
@@ -211,6 +223,8 @@ pub struct RulesConfig {
     pub http_timeouts_go: RuleConfig,
     #[serde(default)]
     pub convention_deviation: RuleConfig,
+    #[serde(default)]
+    pub server_xss_go: RuleConfig,
 }
 
 impl Config {
