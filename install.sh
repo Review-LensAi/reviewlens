@@ -3,7 +3,7 @@
 # This script installs the reviewer-cli for Linux and macOS.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/Ps1012/reviewlens/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/Review-LensAi/reviewlens/main/install.sh | sh
 #
 # The script will:
 # 1. Detect the user's OS and architecture.
@@ -14,7 +14,7 @@
 set -e # Exit on error
 
 # --- Configuration ---
-REPO="Ps1012/reviewlens"
+REPO="Review-LensAi/reviewlens"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="reviewer-cli"
 
