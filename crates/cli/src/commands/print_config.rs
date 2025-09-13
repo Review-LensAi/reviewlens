@@ -10,6 +10,6 @@ pub struct PrintConfigArgs {}
 pub fn run(_args: PrintConfigArgs, config: &Config) -> anyhow::Result<()> {
     // Serialize the config to a pretty JSON string.
     let config_json = serde_json::to_string_pretty(config)?;
-    println!("{}", config_json);
+    log::info!("{}", config_json);
     Ok(())
 }

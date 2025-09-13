@@ -43,7 +43,7 @@ impl RagContextRetriever {
     }
 
     pub async fn retrieve(&self, query: &str) -> Result<String> {
-        println!("Retrieving RAG context for query: {}", query);
+        log::debug!("Retrieving RAG context for query: {}", query);
         // 1. Generate embedding for the query.
         let embedding: Vec<f32> = query.bytes().map(|b| b as f32).collect();
 

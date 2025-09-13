@@ -38,13 +38,17 @@ impl ReviewEngine {
     pub fn new(config: Config) -> Result<Self> {
         let llm = create_llm_provider(&config)?;
         let scanners = crate::scanner::load_enabled_scanners(&config);
-        Ok(Self { config,scanners, llm })
+        Ok(Self {
+            config,
+            scanners,
+            llm,
+        })
     }
 
     /// Runs a complete code review analysis on a given diff.
     pub async fn run(&self, diff: &str) -> Result<ReviewReport> {
-        println!("Engine running with config: {:?}", self.config);
-        println!("Analyzing diff: {}", diff);
+        log::info!("Engine running with config: {:?}", self.config);
+        log::debug!("Analyzing diff: {}", diff);
 
         // 1. Parse the diff to identify changed files and hunks.
         let changed_files = diff_parser::parse(diff)?;
@@ -63,7 +67,10 @@ impl ReviewEngine {
         let rag = RagContextRetriever::new(Box::new(InMemoryVectorStore::default()));
         for issue in &issues {
             let _ = rag
-                .retrieve(&format!("{}:{} {}", issue.file_path, issue.line_number, issue.description))
+                .retrieve(&format!(
+                    "{}:{} {}",
+                    issue.file_path, issue.line_number, issue.description
+                ))
                 .await?;
         }
 
