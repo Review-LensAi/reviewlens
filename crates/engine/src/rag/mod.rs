@@ -3,7 +3,7 @@
 //! This module provides the traits and structures for indexing a codebase
 //! and retrieving relevant context to inform the LLM's analysis.
 
-use crate::error::Result;
+use crate::error::{EngineError, Result};
 use async_trait::async_trait;
 
 /// A trait for a vector store that can store and retrieve embeddings.
@@ -28,16 +28,45 @@ pub trait Indexer {
 
 // Example of a simple RAG context retriever.
 pub struct RagContextRetriever {
-    // In a real implementation, this would be a trait object: Box<dyn VectorStore>
-    // vector_store: Box<dyn VectorStore>,
+    /// The vector store used to search for similar documents.
+    ///
+    /// In a real implementation this would likely be backed by an external
+    /// service such as Qdrant or Tantivy. Here we keep the trait object to
+    /// allow different store implementations.
+    vector_store: Box<dyn VectorStore + Send + Sync>,
 }
 
 impl RagContextRetriever {
+    /// Creates a new `RagContextRetriever` with the provided vector store.
+    pub fn new(vector_store: Box<dyn VectorStore + Send + Sync>) -> Self {
+        Self { vector_store }
+    }
+
     pub async fn retrieve(&self, query: &str) -> Result<String> {
         println!("Retrieving RAG context for query: {}", query);
         // 1. Generate embedding for the query.
+        let embedding: Vec<f32> = query.bytes().map(|b| b as f32).collect();
+
         // 2. Search the vector store.
+        let top_k = 5;
+        let results = self
+            .vector_store
+            .search(embedding, top_k)
+            .await
+            .map_err(|e| EngineError::Rag(format!("Vector store search failed: {e}")))?;
+
         // 3. Format and return the results as a string.
-        todo!("Implement RAG context retrieval.");
+        if results.is_empty() {
+            return Err(EngineError::Rag("No results found".into()));
+        }
+
+        let formatted = results
+            .into_iter()
+            .enumerate()
+            .map(|(i, doc)| format!("{}. {}", i + 1, doc))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        Ok(formatted)
     }
 }
