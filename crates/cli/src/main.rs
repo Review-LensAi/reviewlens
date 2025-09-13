@@ -2,7 +2,7 @@
 
 use clap::Parser;
 use engine::{
-    config::{Config, Provider},
+    config::{Config, IndexConfig, Provider},
     ReviewEngine,
 };
 use env_logger::Target;
@@ -84,7 +84,7 @@ enum Commands {
     Check(commands::check::CheckArgs),
     /// Manages the RAG index for a repository.
     Index(commands::index::IndexArgs),
-    /// Prints the effective configuration.
+    /// Prints the effective configuration, compiled providers, and resolved base reference.
     PrintConfig(commands::print_config::PrintConfigArgs),
     /// Prints the CLI version.
     Version(commands::version::VersionArgs),
@@ -144,7 +144,7 @@ async fn main() -> anyhow::Result<()> {
         config.llm.base_url = Some(url);
     }
     if let Some(path) = cli.index_path {
-        config.index_path = Some(path);
+        config.index = Some(IndexConfig { path });
     }
     if let Some(max) = cli.budget_tokens_max_per_run {
         config.budget.tokens.max_per_run = Some(max);

@@ -14,6 +14,17 @@ deny  = ["target/*", "**/testdata/*"]
 ```
 Only files in `paths.allow` are indexed, helping enforce repository boundaries.
 
+## Index
+
+Override the location of the pre-built vector index:
+
+```toml
+[index]
+path = ".reviewer/index/index.json"
+```
+
+The older top-level `index-path` setting is deprecated.
+
 ## LLM Provider
 ```toml
 [llm]
@@ -40,6 +51,18 @@ Optional sections let you cap token usage or adjust generation parameters:
 [generation]
 temperature = 0.0
 ```
+
+## Diagrams
+When three or more changed files reference one another, the engine populates `mermaid_diagram` in the `ReviewReport` with a simple Mermaid sequence diagram. The Markdown report renders this automatically; no additional configuration is required.
+
+## Hotspot Weights
+Rank hotspots by combining scanner findings and code churn:
+```toml
+[report.hotspot_weights]
+severity = 3
+churn = 1
+```
+Higher `severity` favors files with more findings, while `churn` boosts files with more changed lines.
 
 ## Using in CI
 Supply sensitive values such as API keys via environment variables in your CI system. Example GitHub Actions and GitLab CI files live in [`docs/ci/`](ci/).

@@ -11,6 +11,20 @@ use std::path::Path;
 /// Default path for the RAG index file.
 pub const DEFAULT_INDEX_PATH: &str = ".reviewer/index/index.json";
 
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct IndexConfig {
+    pub path: String,
+}
+
+impl Default for IndexConfig {
+    fn default() -> Self {
+        Self {
+            path: DEFAULT_INDEX_PATH.to_string(),
+        }
+    }
+}
+
 // As per PRD section 9
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -25,9 +39,15 @@ pub struct Config {
     pub privacy: PrivacyConfig,
     #[serde(default)]
     pub paths: PathsConfig,
+    /// Configuration for the pre-built vector index used for RAG.
+    #[serde(default)]
+    pub report: ReportConfig,
     /// Optional path to a pre-built vector index used for RAG.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
+    pub index: Option<IndexConfig>,
+    #[deprecated(note = "use [index] table instead")]
+    #[serde(skip_serializing, default)]
     pub index_path: Option<String>,
     #[serde(default)]
     pub rules: RulesConfig,
@@ -164,6 +184,48 @@ fn default_include() -> Vec<String> {
     vec!["**/*".to_string()]
 }
 
+// As per PRD: `[report.hotspot_weights]` section
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct HotspotWeights {
+    #[serde(default = "default_severity_weight")]
+    pub severity: u32,
+    #[serde(default = "default_churn_weight")]
+    pub churn: u32,
+}
+
+impl Default for HotspotWeights {
+    fn default() -> Self {
+        Self {
+            severity: default_severity_weight(),
+            churn: default_churn_weight(),
+        }
+    }
+}
+
+fn default_severity_weight() -> u32 {
+    3
+}
+
+fn default_churn_weight() -> u32 {
+    1
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReportConfig {
+    #[serde(default)]
+    pub hotspot_weights: HotspotWeights,
+}
+
+impl Default for ReportConfig {
+    fn default() -> Self {
+        Self {
+            hotspot_weights: HotspotWeights::default(),
+        }
+    }
+}
+
 // As per PRD: `[rules]` section with severity
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, ValueEnum)]
 #[serde(rename_all = "kebab-case")]
@@ -235,6 +297,18 @@ impl Config {
         let content = std::fs::read_to_string(path)?;
         toml::from_str(&content).map_err(|e| EngineError::Config(e.to_string()))
     }
+
+    /// Returns the configured index path, respecting the deprecated field.
+    pub fn index_path(&self) -> Option<&str> {
+        if let Some(index) = &self.index {
+            Some(index.path.as_str())
+        } else {
+            #[allow(deprecated)]
+            {
+                self.index_path.as_deref()
+            }
+        }
+    }
 }
 
 // Need a Default implementation for Config as well, so we can create one if the file is missing.
@@ -246,7 +320,10 @@ impl Default for Config {
             generation: GenerationConfig::default(),
             privacy: PrivacyConfig::default(),
             paths: PathsConfig::default(),
-            index_path: Some(DEFAULT_INDEX_PATH.to_string()),
+            index: Some(IndexConfig::default()),
+            #[allow(deprecated)]
+            index_path: None,
+            report: ReportConfig::default(),
             rules: RulesConfig::default(),
             fail_on: default_fail_on(),
         }

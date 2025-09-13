@@ -38,14 +38,14 @@ jobs:
       run: cargo build --release
 
     - name: Index repository (outputs .reviewer/index/index.json by default)
-      run: ./target/release/reviewer-cli index --path .
+      run: ./target/release/reviewlens index --path .
 
     - name: Run code review
       id: code-review
       run: |
         # Use the PR's base branch as the diff target
         BASE_BRANCH="origin/${{ github.base_ref }}"
-        ./target/release/reviewer-cli check --base-ref $BASE_BRANCH --output review_report.md
+        ./target/release/reviewlens check --base-ref $BASE_BRANCH --output review_report.md
       # Continue even if the check fails, so we can upload the report
       continue-on-error: true
 

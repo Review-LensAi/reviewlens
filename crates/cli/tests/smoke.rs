@@ -6,19 +6,25 @@ use tempfile::tempdir;
 
 #[test]
 fn print_config_command_produces_valid_json() {
-    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     let output = cmd
         .arg("print-config")
+        .arg("--base-ref")
+        .arg("HEAD")
         .output()
         .expect("failed to execute command");
 
     cmd.assert().success();
 
     let stdout = String::from_utf8(output.stdout).unwrap();
-    let mut parts = stdout.splitn(2, "Compiled providers:");
-    let json_part = parts.next().unwrap().trim();
+    let mut base_split = stdout.splitn(2, "Base ref:");
+    let json_part = base_split.next().unwrap().trim();
+    let base_and_providers = base_split.next().expect("expected base ref in output");
     let json: Value = serde_json::from_str(json_part).expect("stdout should start with valid JSON");
-    if let Some(provider_line) = parts.next() {
+    let mut provider_split = base_and_providers.splitn(2, "Compiled providers:");
+    let base_line = provider_split.next().unwrap().trim();
+    assert_eq!(base_line, "HEAD");
+    if let Some(provider_line) = provider_split.next() {
         assert!(provider_line.contains("null"));
     } else {
         panic!("expected providers list in output");
@@ -31,7 +37,7 @@ fn print_config_command_produces_valid_json() {
 
 #[test]
 fn version_command_displays_version() {
-    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     let output = cmd
         .arg("version")
         .output()
@@ -80,7 +86,7 @@ fn check_command_respects_path_argument() {
     let output_path = repo.join("out.md");
     let output_str = output_path.to_str().unwrap();
 
-    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
         "check",
         "--path",
@@ -132,7 +138,7 @@ fn check_command_reports_issues_and_exit_code() {
     // Modify file to introduce a secret
     fs::write(repo.join("file.txt"), "api_key = \"ABCDEFGHIJKLMNOP\"\n").unwrap();
 
-    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args(["check", "--path", repo_str, "--base-ref", "HEAD"]);
 
     cmd.assert().code(1);
@@ -178,7 +184,7 @@ fn check_command_respects_fail_on_from_config() {
     let config_path = repo.join("reviewer.toml");
     let config_str = config_path.to_str().unwrap();
 
-    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
         "--config",
         config_str,
@@ -226,8 +232,8 @@ fn check_command_without_upstream_or_base_ref_errors() {
     // Modify file to create diff
     fs::write(repo.join("file.txt"), "hello world\n").unwrap();
 
-    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args(["check", "--path", repo_str]);
 
-    cmd.assert().code(3);
+    cmd.assert().code(2);
 }

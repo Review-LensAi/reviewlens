@@ -77,7 +77,7 @@ impl Scanner for ConventionDeviationScanner {
 
     fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
-        let index_path = match &config.index_path {
+        let index_path = match config.index_path() {
             Some(p) => p,
             None => return Ok(issues),
         };

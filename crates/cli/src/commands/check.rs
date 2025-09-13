@@ -48,16 +48,16 @@ pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> i32 {
                 match engine_error {
                     EngineError::Config(_) => {
                         log::error!("{}", e);
-                        3
+                        2
                     }
                     _ => {
                         log::error!("{}", e);
-                        2
+                        3
                     }
                 }
             } else {
                 log::error!("{}", e);
-                2
+                3
             }
         }
     }
