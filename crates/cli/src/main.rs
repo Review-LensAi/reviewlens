@@ -1,6 +1,5 @@
 //! The command-line interface for the Intelligent Code Review Agent.
 
-use anyhow::Context;
 use clap::Parser;
 use engine::ReviewEngine;
 use std::path::PathBuf;
