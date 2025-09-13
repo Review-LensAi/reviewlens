@@ -1,5 +1,7 @@
 # Example configuration for the Intelligent Code Review Agent.
 # Copy this file to `reviewer.toml` and customize it for your project.
+# Values here can be overridden by environment variables (prefixed with `REVIEWER_`)
+# and by CLI flags. Precedence: CLI flags > env vars > this file.
 
 # --- Paths Configuration ---
 # Optional path to a pre-built vector index for Retrieval-Augmented Generation.
