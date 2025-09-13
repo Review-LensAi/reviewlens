@@ -35,6 +35,8 @@ enum Commands {
     Index(commands::index::IndexArgs),
     /// Prints the effective configuration.
     PrintConfig(commands::print_config::PrintConfigArgs),
+    /// Prints the CLI version.
+    Version(commands::version::VersionArgs),
 }
 
 #[tokio::main]
@@ -55,6 +57,10 @@ async fn main() -> anyhow::Result<()> {
     builder.target(Target::Stdout);
     builder.format(|f, record| writeln!(f, "{}", record.args()));
     builder.init();
+
+    if let Commands::Version(args) = &cli.command {
+        return commands::version::run(args.clone());
+    }
 
     // Load configuration from the path specified in the CLI arguments.
     // If the file doesn't exist, use the default configuration.
@@ -86,6 +92,10 @@ async fn main() -> anyhow::Result<()> {
         Commands::Check(args) => commands::check::run(args, &engine).await?,
         Commands::Index(args) => commands::index::run(args, &engine).await?,
         Commands::PrintConfig(_) => {
+            // This case is handled above, but the compiler needs it to be exhaustive.
+            unreachable!()
+        }
+        Commands::Version(_) => {
             // This case is handled above, but the compiler needs it to be exhaustive.
             unreachable!()
         }
