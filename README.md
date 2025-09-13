@@ -14,59 +14,109 @@ Our goal is to build an agent that slashes review time while improving code qual
 - **Config over Code:** Behavior is controlled through a simple `reviewer.toml` file.
 - **Security & Privacy by Default:** Features path allowlists, secret redaction, and an offline "local-only" mode to ensure code privacy.
 
-## Getting Started
+## Installation
 
-### Prerequisites
+We offer several methods to install the `reviewer-cli`. Choose the one that best fits your workflow.
 
-- Rust (latest stable version)
-- Git
+### Install Script (Recommended for Linux & macOS)
 
-### Installation & Setup
+You can install the latest version using our installer script. It will automatically detect your OS and install the correct pre-compiled binary.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/some-org/intelligent-code-reviewer/main/install.sh | sh
+```
+
+The script will place the `reviewer-cli` binary in `/usr/local/bin` and may prompt for `sudo` access.
+
+### GitHub Releases (Linux, macOS, Windows)
+
+You can download pre-compiled binaries directly from the [GitHub Releases page](https://github.com/some-org/intelligent-code-reviewer/releases).
+
+Download the appropriate archive for your operating system, extract it, and place the `reviewer-cli` (or `reviewer-cli.exe`) binary in a directory included in your system's `PATH`.
+
+### With `cargo` (Requires Rust)
+
+If you have the Rust toolchain installed, you can build and install `reviewer-cli` from crates.io.
+
+```bash
+cargo install reviewer-cli
+```
+*(Note: The crate is not yet published. This will be available in a future release.)*
+
+### With Docker
+
+For a containerized environment, you can use Docker.
+
+1.  **Build the image:**
+    ```bash
+    docker build -t reviewer-cli .
+    ```
+
+2.  **Run the container:**
+    You'll need to mount your project directory and pass your configuration.
+    ```bash
+    docker run --rm -v "$(pwd):/work" reviewer-cli check --diff main
+    ```
+
+### From Source
+
+If you prefer to build from source, you can clone the repository and build the CLI manually.
 
 1.  **Clone the repository:**
     ```bash
-    git clone <repository_url>
+    git clone https://github.com/some-org/intelligent-code-reviewer.git
     cd intelligent-code-reviewer
     ```
 
-2.  **Configuration:**
-    Copy the example configuration file and customize it.
-    ```bash
-    cp reviewer.toml.example reviewer.toml
-    ```
-    Edit `reviewer.toml` to select your desired LLM provider, model, paths, and rule settings.
-
-3.  **Build the CLI:**
+2.  **Build the CLI:**
     ```bash
     cargo build --release
     ```
-    The binary will be available at `target/release/reviewer-cli`.
+    The binary will be available at `target/release/reviewer-cli`. You can add this to your `PATH` or use it directly.
 
-### Usage
 
-The primary command is `reviewer-cli check`. It analyzes the difference between your current branch and a base branch (`main` by default).
+## Getting Started
+
+After installing `reviewer-cli`, follow these steps to get started.
+
+### 1. Configuration
+
+The agent is controlled by a `reviewer.toml` file. Copy the example file to the root of your project:
 
 ```bash
-# Run a review against the 'main' branch
-./target/release/reviewer-cli check --diff main
-
-# The review will be saved to `review_report.md`
-cat review_report.md
+cp reviewer.toml.example reviewer.toml
 ```
 
-## Architecture
+Next, edit `reviewer.toml` to configure your desired LLM provider, model, project paths, and review rules. At a minimum, you must set your LLM provider and API key.
 
-The project is structured as a Cargo workspace:
+### 2. Usage
 
--   `crates/engine`: The core library containing all analysis, RAG, scanning, and reporting logic. It is completely independent of the CLI.
--   `crates/cli`: A thin wrapper around the `engine` that provides a command-line interface.
--   `reviewer.toml`: The configuration file for defining project rules, LLM providers, and other settings.
+The primary command is `reviewer-cli check`. It analyzes the difference between your current branch and a base branch (e.g., `main`).
+
+Run a review from the root of your project:
+```bash
+# Run a review against the 'main' branch
+reviewer-cli check --diff main
+```
+
+The review report will be saved to `review_report.md` by default. You can view it with:
+```bash
+cat review_report.md
+```
 
 ## CI/CD Integration
 
 You can run the agent in your CI pipeline to automatically review merge requests. The CLI is designed to exit with a non-zero status code if issues are found, allowing you to gate PRs.
 
 See the `docs/ci/` directory for example configurations for GitHub Actions and GitLab CI.
+
+## Architecture
+
+The project is structured as a Cargo workspace:
+
+-   `crates/engine`: The core library containing all analysis, RAG, scanning, and reporting logic.
+-   `crates/cli`: A thin wrapper around the `engine` that provides a command-line interface.
+-   `reviewer.toml`: The configuration file for defining project rules, LLM providers, and other settings.
 
 ---
 

@@ -1,7 +1,6 @@
 //! The `index` subcommand.
 
 use clap::Args;
-use engine::rag::index_repository;
 use engine::ReviewEngine;
 use std::fs;
 use std::path::Path;
