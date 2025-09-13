@@ -23,14 +23,14 @@ We offer several methods to install the `reviewer-cli`. Choose the one that best
 You can install the latest version using our installer script. It will automatically detect your OS and install the correct pre-compiled binary.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/some-org/intelligent-code-reviewer/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Review-LensAi/reviewlens/main/install.sh | sh
 ```
 
 The script will place the `reviewer-cli` binary in `/usr/local/bin` and may prompt for `sudo` access.
 
 ### GitHub Releases (Linux, macOS, Windows)
 
-You can download pre-compiled binaries directly from the [GitHub Releases page](https://github.com/some-org/intelligent-code-reviewer/releases).
+You can download pre-compiled binaries directly from the [GitHub Releases page](https://github.com/Review-LensAi/reviewlens/releases).
 
 Download the appropriate archive for your operating system, extract it, and place the `reviewer-cli` (or `reviewer-cli.exe`) binary in a directory included in your system's `PATH`.
 
@@ -74,8 +74,8 @@ If you prefer to build from source, you can clone the repository and build the C
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/some-org/intelligent-code-reviewer.git
-    cd intelligent-code-reviewer
+    git clone https://github.com/Review-LensAi/reviewlens.git
+    cd reviewlens
     ```
 
 2.  **Build the CLI:**
