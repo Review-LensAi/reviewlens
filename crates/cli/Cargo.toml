@@ -1,0 +1,22 @@
+[package]
+name = "reviewer-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "CLI for the Intelligent Code Review Agent."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+# Internal Crates
+engine = { path = "../engine" }
+
+# Workspace dependencies
+log.workspace = true
+env_logger.workspace = true
+tokio = { workspace = true, features = ["full"] }
+anyhow.workspace = true
+
+# CLI-specific dependencies
+clap = { version = "4.5", features = ["derive", "env"] }
