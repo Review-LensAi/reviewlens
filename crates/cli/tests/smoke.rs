@@ -127,24 +127,66 @@ fn check_command_reports_issues_and_exit_code() {
         .expect("git commit failed");
 
     // Modify file to introduce a secret
-    fs::write(
-        repo.join("file.txt"),
-        "api_key = \"ABCDEFGHIJKLMNOP\"\n",
-    )
-    .unwrap();
+    fs::write(repo.join("file.txt"), "api_key = \"ABCDEFGHIJKLMNOP\"\n").unwrap();
+
+    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    cmd.args(["check", "--path", repo_str, "--base-ref", "HEAD"]);
+
+    cmd.assert().code(1);
+}
+
+#[test]
+fn check_command_respects_fail_on_from_config() {
+    let temp = tempdir().unwrap();
+    let repo = temp.path();
+    let repo_str = repo.to_str().unwrap();
+
+    // Initialize git repository
+    StdCommand::new("git")
+        .args(["init", repo_str])
+        .output()
+        .expect("git init failed");
+    StdCommand::new("git")
+        .args(["-C", repo_str, "config", "user.email", "you@example.com"])
+        .output()
+        .expect("git config email failed");
+    StdCommand::new("git")
+        .args(["-C", repo_str, "config", "user.name", "Your Name"])
+        .output()
+        .expect("git config name failed");
+
+    // Create initial commit
+    fs::write(repo.join("file.txt"), "hello\n").unwrap();
+    StdCommand::new("git")
+        .args(["-C", repo_str, "add", "."])
+        .output()
+        .expect("git add failed");
+    StdCommand::new("git")
+        .args(["-C", repo_str, "commit", "-m", "init"])
+        .output()
+        .expect("git commit failed");
+
+    // Modify file to introduce a secret
+    fs::write(repo.join("file.txt"), "api_key = \"ABCDEFGHIJKLMNOP\"\n").unwrap();
+
+    // Configure high fail-on threshold
+    fs::write(repo.join("reviewer.toml"), "fail-on = \"high\"\n").unwrap();
+
+    let config_path = repo.join("reviewer.toml");
+    let config_str = config_path.to_str().unwrap();
 
     let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
     cmd.args([
+        "--config",
+        config_str,
         "check",
         "--path",
         repo_str,
         "--base-ref",
         "HEAD",
-        "--fail-on",
-        "low",
     ]);
 
-    cmd.assert().code(1);
+    cmd.assert().code(0);
 }
 
 #[test]

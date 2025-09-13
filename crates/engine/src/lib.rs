@@ -78,6 +78,11 @@ impl ReviewEngine {
         })
     }
 
+    /// Returns a reference to the engine's configuration.
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
     /// Runs a complete code review analysis on a given diff.
     pub async fn run(&self, diff: &str) -> Result<ReviewReport> {
         log::info!("Engine running with config: {:?}", self.config);
