@@ -118,6 +118,11 @@ The project is structured as a Cargo workspace:
 -   `crates/cli`: A thin wrapper around the `engine` that provides a command-line interface.
 -   `reviewer.toml`: The configuration file for defining project rules, LLM providers, and other settings.
 
+## Supported Diff Formats
+
+The engine uses the [`patch`](https://crates.io/crates/patch) crate to parse diffs in the unified format. It understands
+standard text diffs, file renames, binary file changes, and multiple hunks within a single file.
+
 ---
 
 *This project was bootstrapped by an AI agent.*
