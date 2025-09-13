@@ -72,8 +72,13 @@ impl ReportGenerator for MarkdownGenerator {
         if report.code_quality.is_empty() {
             md.push_str("No code quality issues found.\n");
         } else {
+            md.push_str("| Location | Note |\n|---|---|\n");
             for note in &report.code_quality {
-                md.push_str(&format!("* {}\n", note));
+                if let Some((loc, desc)) = note.split_once(" - ") {
+                    md.push_str(&format!("| `{}` | {} |\n", loc, desc));
+                } else {
+                    md.push_str(&format!("| {} | |\n", note));
+                }
             }
         }
 
@@ -81,8 +86,14 @@ impl ReportGenerator for MarkdownGenerator {
         if report.hotspots.is_empty() {
             md.push_str("No hotspots identified.\n");
         } else {
+            md.push_str("| File | Changes |\n|---|---|\n");
             for spot in &report.hotspots {
-                md.push_str(&format!("* {}\n", spot));
+                if let Some((file, changes)) = spot.split_once(" (") {
+                    let changes = changes.trim_end_matches(')');
+                    md.push_str(&format!("| `{}` | {} |\n", file, changes));
+                } else {
+                    md.push_str(&format!("| {} | |\n", spot));
+                }
             }
         }
 
