@@ -14,7 +14,7 @@ pub struct ReviewReport {
     pub code_quality: Vec<String>,
     /// Paths or descriptions of files considered hotspots.
     pub hotspots: Vec<String>,
-    /// Optional Mermaid diagram describing flows or relationships.
+    /// Optional Mermaid sequence diagram showing file interactions.
     pub mermaid_diagram: Option<String>,
     pub config: Config,
 }

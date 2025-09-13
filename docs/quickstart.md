@@ -24,6 +24,8 @@ reviewer-cli check --base-ref main
 ```
 The CLI prints a short summary and the top hotspots to stdout, while the full report is written to `review_report.md`.
 
+When three or more files reference one another, the report also includes a Mermaid sequence diagram visualizing the flow between them.
+
 ## CI Setup
 The CLI can gate pull requests by exiting non‑zero when issues are found. See the sample configurations in [`docs/ci/`](ci/) for GitHub Actions and GitLab CI examples.
 
