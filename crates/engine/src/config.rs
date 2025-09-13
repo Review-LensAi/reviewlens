@@ -22,6 +22,10 @@ pub struct Config {
     pub privacy: PrivacyConfig,
     #[serde(default)]
     pub paths: PathsConfig,
+    /// Optional path to a pre-built vector index used for RAG.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub index_path: Option<String>,
     #[serde(default)]
     pub rules: RulesConfig,
 }
@@ -223,6 +227,7 @@ impl Default for Config {
             generation: GenerationConfig::default(),
             privacy: PrivacyConfig::default(),
             paths: PathsConfig::default(),
+            index_path: None,
             rules: RulesConfig::default(),
         }
     }

@@ -3,3 +3,4 @@
 pub mod check;
 pub mod index;
 pub mod print_config;
+pub mod version;

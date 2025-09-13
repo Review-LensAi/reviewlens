@@ -21,13 +21,13 @@ pub mod scanner;
 use crate::config::Config;
 use crate::error::{EngineError, Result};
 use crate::llm::{create_llm_provider, LlmProvider};
-use crate::rag::{InMemoryVectorStore, RagContextRetriever};
+use crate::rag::{InMemoryVectorStore, RagContextRetriever, VectorStore};
 use crate::report::ReviewReport;
 use crate::scanner::Scanner;
 use globset::{Glob, GlobSet, GlobSetBuilder};
+use regex::Regex;
 use std::fs;
 use std::path::Path;
-use regex::Regex;
 
 /// Placeholder used when redacting sensitive information.
 const REDACTION_PLACEHOLDER: &str = "[REDACTED]";
@@ -42,9 +42,7 @@ pub fn redact_text(config: &Config, text: &str) -> String {
     let mut redacted = text.to_string();
     for pattern in &config.privacy.redaction.patterns {
         if let Ok(re) = Regex::new(pattern) {
-            redacted = re
-                .replace_all(&redacted, REDACTION_PLACEHOLDER)
-                .to_string();
+            redacted = re.replace_all(&redacted, REDACTION_PLACEHOLDER).to_string();
         }
     }
     redacted
@@ -101,19 +99,39 @@ impl ReviewEngine {
         }
 
         // 3. Retrieve RAG context for flagged regions.
-        let rag = RagContextRetriever::new(Box::new(InMemoryVectorStore::default()));
+        let vector_store: Box<dyn VectorStore + Send + Sync> = if let Some(path) = &self.config.index_path {
+            match InMemoryVectorStore::load_from_disk(path) {
+                Ok(store) => Box::new(store),
+                Err(e) => {
+                    log::warn!("Failed to load vector index from {}: {}", path, e);
+                    Box::new(InMemoryVectorStore::default())
+                }
+            }
+        } else {
+            Box::new(InMemoryVectorStore::default())
+        };
+        let rag = RagContextRetriever::new(vector_store);
         let mut contexts = Vec::new();
         for issue in &issues {
             if let Ok(ctx) = rag
-                .retrieve(&format!(
-                    "{}:{} {}",
-                    issue.file_path, issue.line_number, issue.description
-                ))
+                .retrieve(&format!("{}:{} {}", issue.file_path, issue.line_number, issue.description))
                 .await
             {
                 contexts.push(ctx);
             }
         }
+
+        // 4. Call the selected LLM provider for suggestions.
+        let mut prompt = String::new();
+        if !contexts.is_empty() {
+            prompt.push_str("Context:\n");
+            prompt.push_str(&contexts.join("\n\n"));
+            prompt.push_str("\n\n");
+        }
+        prompt.push_str(&format!(
+            "Provide a review summary for the following issues: {:?}",
+            issues
+        ));
 
         // 4. Redact issue descriptions and contexts before calling the LLM.
         let redacted_issues: Vec<String> = issues
@@ -136,9 +154,10 @@ impl ReviewEngine {
             redacted_contexts.join("\n")
         );
 
+        // 5. Call the selected LLM provider for suggestions.
         let llm_response = self.llm.generate(&prompt).await?;
 
-        // 5. Build and return the ReviewReport.
+        // 6. Build and return the ReviewReport.
         let report = ReviewReport {
             summary: llm_response.content,
             issues,

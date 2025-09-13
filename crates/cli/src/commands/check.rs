@@ -4,6 +4,7 @@ use clap::Args;
 use engine::config::Severity;
 use engine::report::{MarkdownGenerator, ReportGenerator};
 use engine::ReviewEngine;
+use std::env;
 use std::fs;
 use std::process::Command;
 
@@ -47,10 +48,19 @@ pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<()> {
         String::from_utf8(diff_output.stdout).context("diff output was not valid UTF-8")?;
 
     // 2. Call the engine to run the review and capture its report.
-    let report = engine
-        .run(&diff_content)
-        .await
-        .map_err(|e| anyhow::anyhow!(e))?;
+    // Ensure file reads are relative to the provided path.
+    let report = {
+        let original_dir = env::current_dir().with_context(|| "failed to get current directory")?;
+        env::set_current_dir(&args.path)
+            .with_context(|| format!("failed to change to directory {}", args.path))?;
+        let result = engine
+            .run(&diff_content)
+            .await
+            .map_err(|e| anyhow::anyhow!(e));
+        env::set_current_dir(original_dir)
+            .with_context(|| "failed to restore working directory")?;
+        result?
+    };
 
     // 3. Generate the markdown report and write it to `args.output`.
     let generator = MarkdownGenerator;
