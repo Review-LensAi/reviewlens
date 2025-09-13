@@ -9,16 +9,22 @@ fn print_config_command_produces_valid_json() {
     let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
     let output = cmd
         .arg("print-config")
+        .arg("--base-ref")
+        .arg("HEAD")
         .output()
         .expect("failed to execute command");
 
     cmd.assert().success();
 
     let stdout = String::from_utf8(output.stdout).unwrap();
-    let mut parts = stdout.splitn(2, "Compiled providers:");
-    let json_part = parts.next().unwrap().trim();
+    let mut base_split = stdout.splitn(2, "Base ref:");
+    let json_part = base_split.next().unwrap().trim();
+    let base_and_providers = base_split.next().expect("expected base ref in output");
     let json: Value = serde_json::from_str(json_part).expect("stdout should start with valid JSON");
-    if let Some(provider_line) = parts.next() {
+    let mut provider_split = base_and_providers.splitn(2, "Compiled providers:");
+    let base_line = provider_split.next().unwrap().trim();
+    assert_eq!(base_line, "HEAD");
+    if let Some(provider_line) = provider_split.next() {
         assert!(provider_line.contains("null"));
     } else {
         panic!("expected providers list in output");
