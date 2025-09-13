@@ -27,6 +27,28 @@ use crate::scanner::Scanner;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use std::fs;
 use std::path::Path;
+use regex::Regex;
+
+/// Placeholder used when redacting sensitive information.
+const REDACTION_PLACEHOLDER: &str = "[REDACTED]";
+
+/// Redacts sensitive information from the provided text based on the
+/// configured redaction patterns.
+pub fn redact_text(config: &Config, text: &str) -> String {
+    if !config.privacy.redaction.enabled || config.privacy.redaction.patterns.is_empty() {
+        return text.to_string();
+    }
+
+    let mut redacted = text.to_string();
+    for pattern in &config.privacy.redaction.patterns {
+        if let Ok(re) = Regex::new(pattern) {
+            redacted = re
+                .replace_all(&redacted, REDACTION_PLACEHOLDER)
+                .to_string();
+        }
+    }
+    redacted
+}
 
 /// The main engine struct.
 pub struct ReviewEngine {
@@ -80,19 +102,33 @@ impl ReviewEngine {
 
         // 3. Retrieve RAG context for flagged regions.
         let rag = RagContextRetriever::new(Box::new(InMemoryVectorStore::default()));
+        let mut contexts = Vec::new();
         for issue in &issues {
-            let _ = rag
-                .retrieve(&format!(
-                    "{}:{} {}",
-                    issue.file_path, issue.line_number, issue.description
-                ))
+            let context = rag
+                .retrieve(&format!("{}:{} {}", issue.file_path, issue.line_number, issue.description))
                 .await?;
+            contexts.push(context);
         }
 
-        // 4. Call the selected LLM provider for suggestions.
+        // 4. Redact issue descriptions and contexts before calling the LLM.
+        let redacted_issues: Vec<String> = issues
+            .iter()
+            .map(|issue| {
+                let redacted_desc = redact_text(&self.config, &issue.description);
+                format!(
+                    "{}:{} {} - {}",
+                    issue.file_path, issue.line_number, issue.title, redacted_desc
+                )
+            })
+            .collect();
+        let redacted_contexts: Vec<String> = contexts
+            .iter()
+            .map(|c| redact_text(&self.config, c))
+            .collect();
         let prompt = format!(
-            "Provide a review summary for the following issues: {:?}",
-            issues
+            "Provide a review summary for the following issues:\n{}\nContext:\n{}",
+            redacted_issues.join("\n"),
+            redacted_contexts.join("\n")
         );
         let llm_response = self.llm.generate(&prompt).await?;
 
