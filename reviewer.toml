@@ -2,6 +2,10 @@
 # Copy this file to `reviewer.toml` and customize it for your project.
 
 # --- Paths Configuration ---
+# Optional path to a pre-built vector index for Retrieval-Augmented Generation.
+# If provided, the engine will load this index at startup.
+index-path = "./vector_store.json"
+
 [paths]
 # Paths to include (allow) in the analysis. Globs are supported.
 allow = ["src/**/*.rs", "crates/**/*.rs"]

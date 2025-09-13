@@ -37,6 +37,9 @@ jobs:
     - name: Build the CLI
       run: cargo build --release
 
+    - name: Index repository
+      run: ./target/release/reviewer-cli index --path . --output index.json
+
     - name: Run code review
       id: code-review
       run: |

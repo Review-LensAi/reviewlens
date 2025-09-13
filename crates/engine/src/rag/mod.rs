@@ -5,7 +5,9 @@
 
 use crate::error::{EngineError, Result};
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::Path;
 use walkdir::WalkDir;
 
 /// A trait for a vector store that can store and retrieve embeddings.
@@ -74,9 +76,16 @@ impl RagContextRetriever {
 }
 
 /// A simple in-memory vector store for demonstration purposes.
-#[derive(Default)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct InMemoryVectorStore {
     documents: Vec<String>,
+}
+
+impl InMemoryVectorStore {
+    /// Returns the number of documents stored.
+    pub fn len(&self) -> usize {
+        self.documents.len()
+    }
 }
 
 #[async_trait]
@@ -93,9 +102,27 @@ impl VectorStore for InMemoryVectorStore {
     }
 }
 
+impl InMemoryVectorStore {
+    /// Saves the vector store to the given path in JSON format.
+    pub fn save_to_disk<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        let data = serde_json::to_vec(&self)
+            .map_err(|e| EngineError::Rag(format!("Failed to serialize store: {e}")))?;
+        fs::write(path, data)?;
+        Ok(())
+    }
+
+    /// Loads the vector store from the given path. If the file does not
+    /// exist or cannot be deserialized, an error is returned.
+    pub fn load_from_disk<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let data = fs::read(path)?;
+        serde_json::from_slice(&data)
+            .map_err(|e| EngineError::Rag(format!("Failed to deserialize store: {e}")))
+    }
+}
+
 /// Indexes all files under `path` and populates an `InMemoryVectorStore`.
 pub async fn index_repository(path: &str, force: bool) -> Result<InMemoryVectorStore> {
-    println!("Indexing repository at {} (force={})", path, force);
+    log::info!("Indexing repository at {} (force={})", path, force);
     let mut store = InMemoryVectorStore::default();
 
     for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
@@ -106,5 +133,6 @@ pub async fn index_repository(path: &str, force: bool) -> Result<InMemoryVectorS
         }
     }
 
+    log::info!("Indexed {} files", store.len());
     Ok(store)
 }
