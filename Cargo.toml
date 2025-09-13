@@ -6,13 +6,13 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0-alpha"
+version = "1.0.0"
 edition = "2021"
-authors = ["AI Agent <ai-agent@example.com>"]
+authors = ["Bene and AI <bensatriya3@gmail.com>"]
 description = "An intelligent, context-aware, and security-first code review agent."
 license = "Apache-2.0"
-repository = "https://github.com/some-org/intelligent-code-reviewer"
-homepage = "https://github.com/some-org/intelligent-code-reviewer"
+repository = "https://github.com/Review-LensAi/reviewlens"
+homepage = "https://github.com/Review-LensAi/reviewlens"
 
 [workspace.dependencies]
 # --- Internal Crates ---
