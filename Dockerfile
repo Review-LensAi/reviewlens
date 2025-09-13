@@ -21,20 +21,20 @@ COPY crates/engine/src/ ./crates/engine/src/
 COPY crates/cli/src/ ./crates/cli/src/
 
 # Build the application. This will be much faster due to the cached dependencies.
-RUN cargo build --release --locked --bin reviewer-cli
+RUN cargo build --release --locked --bin reviewlens
 
 # --- Stage 2: Create the final, small image ---
 # We use a minimal Debian image for a small and secure final container.
 FROM debian:bullseye-slim
 
 # Copy the compiled binary from the builder stage.
-COPY --from=builder /app/target/release/reviewer-cli /usr/local/bin/reviewer-cli
+COPY --from=builder /app/target/release/reviewlens /usr/local/bin/reviewlens
 
 # Set a default working directory for when the container runs.
 WORKDIR /work
 
 # Set the binary as the entrypoint for the container.
-ENTRYPOINT ["reviewer-cli"]
+ENTRYPOINT ["reviewlens"]
 
 # Set a default command to run when the container starts.
 CMD ["--help"]

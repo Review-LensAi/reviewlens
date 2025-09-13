@@ -56,6 +56,11 @@ enabled = true
 patterns = []
 
 
+# --- Report Settings ---
+[report.hotspot_weights]
+severity = 3  # weight for number of findings
+churn = 1     # weight for changed lines
+
 # --- Rule and Scanner Configuration ---
 [rules.secrets]
 enabled = true

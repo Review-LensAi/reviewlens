@@ -1,5 +1,5 @@
 [package]
-name = "reviewer-cli"
+name = "reviewlens"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

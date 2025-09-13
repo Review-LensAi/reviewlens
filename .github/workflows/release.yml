@@ -35,14 +35,14 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Build binary
-        run: cargo build --release --bin reviewer-cli --target ${{ matrix.target }}
+        run: cargo build --release --bin reviewlens --target ${{ matrix.target }}
 
       - name: Package binary
         id: package
         run: |
           RELEASE_DIR="target/${{ matrix.target }}/release"
-          BINARY_NAME="reviewer-cli"
-          ARCHIVE_NAME="reviewer-cli-${{ matrix.target }}.tar.gz"
+          BINARY_NAME="reviewlens"
+          ARCHIVE_NAME="reviewlens-${{ matrix.target }}.tar.gz"
           tar czf ${ARCHIVE_NAME} -C ${RELEASE_DIR} ${BINARY_NAME}
           echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> $GITHUB_OUTPUT
 
@@ -112,44 +112,44 @@ jobs:
           VERSION: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
         run: |
-          SHA_LINUX_AMD64=$(cat release-assets/reviewer-cli-x86_64-unknown-linux-gnu.tar.gz.sha256)
-          SHA_LINUX_ARM64=$(cat release-assets/reviewer-cli-aarch64-unknown-linux-gnu.tar.gz.sha256)
-          SHA_MAC_AMD64=$(cat release-assets/reviewer-cli-x86_64-apple-darwin.tar.gz.sha256)
-          SHA_MAC_ARM64=$(cat release-assets/reviewer-cli-aarch64-apple-darwin.tar.gz.sha256)
-          cat > homebrew-tap/reviewer-cli.rb <<EOF
-          class ReviewerCli < Formula
+          SHA_LINUX_AMD64=$(cat release-assets/reviewlens-x86_64-unknown-linux-gnu.tar.gz.sha256)
+          SHA_LINUX_ARM64=$(cat release-assets/reviewlens-aarch64-unknown-linux-gnu.tar.gz.sha256)
+          SHA_MAC_AMD64=$(cat release-assets/reviewlens-x86_64-apple-darwin.tar.gz.sha256)
+          SHA_MAC_ARM64=$(cat release-assets/reviewlens-aarch64-apple-darwin.tar.gz.sha256)
+          cat > homebrew-tap/reviewlens.rb <<EOF
+          class ReviewLens < Formula
             desc "CLI for the Intelligent Code Review Agent"
             homepage "https://github.com/${REPO}"
             version "${VERSION#v}"
             on_macos do
               if Hardware::CPU.arm?
-                url "https://github.com/${REPO}/releases/download/${VERSION}/reviewer-cli-aarch64-apple-darwin.tar.gz"
+                url "https://github.com/${REPO}/releases/download/${VERSION}/reviewlens-aarch64-apple-darwin.tar.gz"
                 sha256 "${SHA_MAC_ARM64}"
               else
-                url "https://github.com/${REPO}/releases/download/${VERSION}/reviewer-cli-x86_64-apple-darwin.tar.gz"
+                url "https://github.com/${REPO}/releases/download/${VERSION}/reviewlens-x86_64-apple-darwin.tar.gz"
                 sha256 "${SHA_MAC_AMD64}"
               end
             end
             on_linux do
               if Hardware::CPU.arm?
-                url "https://github.com/${REPO}/releases/download/${VERSION}/reviewer-cli-aarch64-unknown-linux-gnu.tar.gz"
+                url "https://github.com/${REPO}/releases/download/${VERSION}/reviewlens-aarch64-unknown-linux-gnu.tar.gz"
                 sha256 "${SHA_LINUX_ARM64}"
               else
-                url "https://github.com/${REPO}/releases/download/${VERSION}/reviewer-cli-x86_64-unknown-linux-gnu.tar.gz"
+                url "https://github.com/${REPO}/releases/download/${VERSION}/reviewlens-x86_64-unknown-linux-gnu.tar.gz"
                 sha256 "${SHA_LINUX_AMD64}"
               end
             end
             def install
-              bin.install "reviewer-cli"
+              bin.install "reviewlens"
             end
             test do
-              system "#{bin}/reviewer-cli", "--help"
+              system "#{bin}/reviewlens", "--help"
             end
           end
           EOF
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add homebrew-tap/reviewer-cli.rb
+          git add homebrew-tap/reviewlens.rb
           git commit -m "chore: update Homebrew formula for ${VERSION}" || echo "no changes"
           git push
 

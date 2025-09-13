@@ -14,9 +14,9 @@ code_review:
     # Build the CLI
     - cargo build --release
     # Build an index for the repository (outputs .reviewer/index/index.json by default)
-    - ./target/release/reviewer-cli index --path .
+    - ./target/release/reviewlens index --path .
     # Run the review against the target branch of the merge request
-    - ./target/release/reviewer-cli check --base-ref $CI_MERGE_REQUEST_TARGET_BRANCH_NAME --output review_report.md
+    - ./target/release/reviewlens check --base-ref $CI_MERGE_REQUEST_TARGET_BRANCH_NAME --output review_report.md
   artifacts:
     paths:
       - review_report.md

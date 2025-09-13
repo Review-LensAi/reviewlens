@@ -84,7 +84,7 @@ enum Commands {
     Check(commands::check::CheckArgs),
     /// Manages the RAG index for a repository.
     Index(commands::index::IndexArgs),
-    /// Prints the effective configuration.
+    /// Prints the effective configuration, compiled providers, and resolved base reference.
     PrintConfig(commands::print_config::PrintConfigArgs),
     /// Prints the CLI version.
     Version(commands::version::VersionArgs),

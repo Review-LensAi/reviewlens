@@ -40,6 +40,9 @@ pub struct Config {
     #[serde(default)]
     pub paths: PathsConfig,
     /// Configuration for the pre-built vector index used for RAG.
+    #[serde(default)]
+    pub report: ReportConfig,
+    /// Optional path to a pre-built vector index used for RAG.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub index: Option<IndexConfig>,
@@ -181,6 +184,48 @@ fn default_include() -> Vec<String> {
     vec!["**/*".to_string()]
 }
 
+// As per PRD: `[report.hotspot_weights]` section
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct HotspotWeights {
+    #[serde(default = "default_severity_weight")]
+    pub severity: u32,
+    #[serde(default = "default_churn_weight")]
+    pub churn: u32,
+}
+
+impl Default for HotspotWeights {
+    fn default() -> Self {
+        Self {
+            severity: default_severity_weight(),
+            churn: default_churn_weight(),
+        }
+    }
+}
+
+fn default_severity_weight() -> u32 {
+    3
+}
+
+fn default_churn_weight() -> u32 {
+    1
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct ReportConfig {
+    #[serde(default)]
+    pub hotspot_weights: HotspotWeights,
+}
+
+impl Default for ReportConfig {
+    fn default() -> Self {
+        Self {
+            hotspot_weights: HotspotWeights::default(),
+        }
+    }
+}
+
 // As per PRD: `[rules]` section with severity
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, ValueEnum)]
 #[serde(rename_all = "kebab-case")]
@@ -278,6 +323,7 @@ impl Default for Config {
             index: Some(IndexConfig::default()),
             #[allow(deprecated)]
             index_path: None,
+            report: ReportConfig::default(),
             rules: RulesConfig::default(),
             fail_on: default_fail_on(),
         }

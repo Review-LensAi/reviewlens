@@ -26,6 +26,8 @@ use crate::report::ReviewReport;
 use crate::scanner::Scanner;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use regex::Regex;
+use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -106,8 +108,8 @@ impl ReviewEngine {
             })
             .collect();
 
-        // Aggregate hotspots based on line churn.
-        let mut file_changes = Vec::new();
+        // Track line churn per file; hotspots are computed after scanning.
+        let mut churn_counts: HashMap<String, usize> = HashMap::new();
         for file in &filtered_files {
             let mut changes = 0usize;
             for hunk in &file.hunks {
@@ -120,22 +122,17 @@ impl ReviewEngine {
                     }
                 }
             }
-            file_changes.push((file.path.clone(), changes));
+            churn_counts.insert(file.path.clone(), changes);
         }
-        file_changes.sort_by(|a, b| b.1.cmp(&a.1));
-        let hotspots: Vec<String> = file_changes
-            .into_iter()
-            .filter(|(_, count)| *count > 0)
-            .take(5)
-            .map(|(path, count)| format!("{path} ({count} changes)"))
-            .collect();
 
         // 2. Run configured scanners on the filtered files, limiting results to diff hunks.
         let mut issues = Vec::new();
         let mut code_quality = Vec::new();
-        for file in filtered_files {
+        let file_paths: Vec<String> = filtered_files.iter().map(|f| f.path.clone()).collect();
+        let mut interactions = HashSet::new();
+        for file in &filtered_files {
             let content = fs::read_to_string(&file.path)?;
-            let mut changed_lines = std::collections::HashSet::new();
+            let mut changed_lines = HashSet::new();
             for hunk in &file.hunks {
                 let mut new_line = hunk.new_start as usize;
                 for line in &hunk.lines {
@@ -166,7 +163,66 @@ impl ReviewEngine {
                     issues.append(&mut found);
                 }
             }
+
+            for other in &file_paths {
+                if other == &file.path {
+                    continue;
+                }
+                let stem = Path::new(other)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("");
+                if content.contains(&format!("use {}", stem))
+                    || content.contains(&format!("{}::", stem))
+                {
+                    interactions.insert((file.path.clone(), other.clone()));
+                }
+            }
         }
+
+        // 3. Perform lightweight flow extraction for sequence diagram.
+        let interactions: Vec<(String, String)> = interactions.into_iter().collect();
+        let mermaid_diagram = if interactions.len() >= 3 {
+            let mut diagram = String::from("sequenceDiagram\n");
+            for (from, to) in &interactions {
+                let from = Path::new(from)
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or(from);
+                let to = Path::new(to)
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or(to);
+                diagram.push_str(&format!("    {}->>{}: uses\n", from, to));
+            }
+            Some(diagram)
+        } else {
+            None
+        };
+
+        // 4. Retrieve RAG context for flagged regions.
+        // Aggregate hotspots using configurable severity and churn weights.
+        let mut issue_counts: HashMap<String, usize> = HashMap::new();
+        for issue in &issues {
+            *issue_counts.entry(issue.file_path.clone()).or_insert(0) += 1;
+        }
+        let sev_w = self.config.report.hotspot_weights.severity;
+        let churn_w = self.config.report.hotspot_weights.churn;
+        let mut file_risks: Vec<(String, u32)> = churn_counts
+            .into_iter()
+            .map(|(path, churn)| {
+                let findings = issue_counts.get(&path).copied().unwrap_or(0) as u32;
+                let risk = sev_w * findings + churn_w * (churn as u32);
+                (path, risk)
+            })
+            .collect();
+        file_risks.sort_by(|a, b| b.1.cmp(&a.1));
+        let hotspots: Vec<String> = file_risks
+            .into_iter()
+            .filter(|(_, risk)| *risk > 0)
+            .take(5)
+            .map(|(path, risk)| format!("{path} (risk {risk})"))
+            .collect();
 
         // 3. Retrieve RAG context for flagged regions.
         let vector_store: Box<dyn VectorStore + Send + Sync> =
@@ -195,7 +251,7 @@ impl ReviewEngine {
             }
         }
 
-        // 4. Call the selected LLM provider for suggestions.
+        // 5. Prepare the prompt for the LLM.
         let mut prompt = String::new();
         if !contexts.is_empty() {
             prompt.push_str("Context:\n");
@@ -207,7 +263,7 @@ impl ReviewEngine {
             issues
         ));
 
-        // 4. Redact issue descriptions and contexts before calling the LLM.
+        // 6. Redact issue descriptions and contexts before calling the LLM.
         let redacted_issues: Vec<String> = issues
             .iter()
             .map(|issue| {
@@ -228,7 +284,7 @@ impl ReviewEngine {
             redacted_contexts.join("\n")
         );
 
-        // 5. Call the selected LLM provider for suggestions.
+        // 7. Call the selected LLM provider for suggestions.
         if let Some(max) = self.config.budget.tokens.max_per_run {
             if total_tokens_used >= max {
                 return Err(EngineError::TokenBudgetExceeded {
@@ -248,13 +304,13 @@ impl ReviewEngine {
             }
         }
 
-        // 6. Build and return the ReviewReport.
+        // 8. Build and return the ReviewReport.
         let report = ReviewReport {
             summary: llm_response.content,
             issues,
             code_quality,
             hotspots,
-            mermaid_diagram: None,
+            mermaid_diagram,
             config: self.config.clone(),
         };
 
