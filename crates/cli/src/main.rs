@@ -175,7 +175,10 @@ async fn main() -> anyhow::Result<()> {
 
     // Execute the subcommand
     match cli.command {
-        Commands::Check(args) => commands::check::run(args, &engine).await?,
+        Commands::Check(args) => {
+            let code = commands::check::run(args, &engine).await;
+            std::process::exit(code);
+        }
         Commands::Index(args) => commands::index::run(args, &engine).await?,
         Commands::PrintConfig(_) => {
             // This case is handled above, but the compiler needs it to be exhaustive.

@@ -45,7 +45,7 @@ jobs:
       run: |
         # Use the PR's base branch as the diff target
         BASE_BRANCH="origin/${{ github.base_ref }}"
-        ./target/release/reviewer-cli check --diff $BASE_BRANCH --output review_report.md
+        ./target/release/reviewer-cli check --base-ref $BASE_BRANCH --output review_report.md
       # Continue even if the check fails, so we can upload the report
       continue-on-error: true
 

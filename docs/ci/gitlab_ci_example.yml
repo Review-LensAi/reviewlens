@@ -16,7 +16,7 @@ code_review:
     # Build an index for the repository (outputs .reviewer/index/index.json by default)
     - ./target/release/reviewer-cli index --path .
     # Run the review against the target branch of the merge request
-    - ./target/release/reviewer-cli check --diff $CI_MERGE_REQUEST_TARGET_BRANCH_NAME --output review_report.md
+    - ./target/release/reviewer-cli check --base-ref $CI_MERGE_REQUEST_TARGET_BRANCH_NAME --output review_report.md
   artifacts:
     paths:
       - review_report.md
