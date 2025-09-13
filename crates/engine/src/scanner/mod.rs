@@ -8,6 +8,7 @@ use crate::{
     error::Result,
 };
 use once_cell::sync::Lazy;
+use regex::Regex;
 use std::collections::HashMap;
 use std::sync::{Mutex, Once};
 
@@ -35,25 +36,70 @@ pub trait Scanner: Send + Sync {
 pub mod secrets;
 pub use secrets::SecretsScanner;
 
+static SQL_INJECTION_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
+    vec![
+        Regex::new("(?i)db\\.(query|exec|queryrow)\\s*\\(\\s*fmt\\.Sprintf").unwrap(),
+        Regex::new("(?i)db\\.(query|exec|queryrow)\\s*\\(\\s*\"[^\"]*\"\\s*\\+").unwrap(),
+        Regex::new("(?i)\"(select|insert|update|delete)[^\"]*\"\\s*\\+").unwrap(),
+    ]
+});
+
 pub struct SqlInjectionGoScanner;
 impl Scanner for SqlInjectionGoScanner {
     fn name(&self) -> &'static str {
         "SQL Injection Scanner (Go)"
     }
-    fn scan(&self, _file_path: &str, _content: &str, _config: &Config) -> Result<Vec<Issue>> {
-        // Placeholder implementation
-        Ok(Vec::new())
+
+    fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
+        let mut issues = Vec::new();
+        for (i, line) in content.lines().enumerate() {
+            for regex in &*SQL_INJECTION_PATTERNS {
+                if regex.is_match(line) {
+                    issues.push(Issue {
+                        title: "Potential SQL Injection".to_string(),
+                        description: "Dynamic SQL query construction detected. Use parameterized queries instead.".to_string(),
+                        file_path: file_path.to_string(),
+                        line_number: i + 1,
+                        severity: config.rules.sql_injection_go.severity.clone(),
+                    });
+                    break;
+                }
+            }
+        }
+        Ok(issues)
     }
 }
+
+static HTTP_DEFAULT_CLIENT_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new("(?i)http\\.(Get|Post|Head|Do)\\(").unwrap());
+static HTTP_CLIENT_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new("(?i)&?http\\.Client\\{[^}]*\\}").unwrap());
 
 pub struct HttpTimeoutsGoScanner;
 impl Scanner for HttpTimeoutsGoScanner {
     fn name(&self) -> &'static str {
         "HTTP Timeouts Scanner (Go)"
     }
-    fn scan(&self, _file_path: &str, _content: &str, _config: &Config) -> Result<Vec<Issue>> {
-        // Placeholder implementation
-        Ok(Vec::new())
+
+    fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
+        let mut issues = Vec::new();
+        for (i, line) in content.lines().enumerate() {
+            let uses_default_client = HTTP_DEFAULT_CLIENT_REGEX.is_match(line);
+            let client_without_timeout =
+                HTTP_CLIENT_REGEX.is_match(line) && !line.contains("Timeout:");
+            if uses_default_client || client_without_timeout {
+                issues.push(Issue {
+                    title: "HTTP Request Without Timeout".to_string(),
+                    description:
+                        "HTTP requests should set a timeout to avoid hanging indefinitely."
+                            .to_string(),
+                    file_path: file_path.to_string(),
+                    line_number: i + 1,
+                    severity: config.rules.http_timeouts_go.severity.clone(),
+                });
+            }
+        }
+        Ok(issues)
     }
 }
 
