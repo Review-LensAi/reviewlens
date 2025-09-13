@@ -11,15 +11,16 @@
 
 // Public modules
 pub mod config;
+pub mod diff_parser;
 pub mod error;
 pub mod llm;
 pub mod rag;
 pub mod report;
 pub mod scanner;
-pub mod diff_parser;
 
 use crate::config::Config;
 use crate::error::Result;
+use crate::llm::{create_llm_provider, LlmProvider};
 use crate::llm::{LlmProvider, LocalOnlyProvider};
 use crate::rag::RagContextRetriever;
 use crate::report::{MarkdownGenerator, ReportGenerator, ReviewReport};
@@ -29,12 +30,14 @@ use std::fs;
 /// The main engine struct.
 pub struct ReviewEngine {
     config: Config,
+    llm: Box<dyn LlmProvider>,
 }
 
 impl ReviewEngine {
     /// Creates a new instance of the review engine from a given configuration.
-    pub fn new(config: Config) -> Self {
-        Self { config }
+    pub fn new(config: Config) -> Result<Self> {
+        let llm = create_llm_provider(&config.llm)?;
+        Ok(Self { config, llm })
     }
 
     /// Runs a complete code review analysis on a given diff.

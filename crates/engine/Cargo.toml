@@ -18,6 +18,7 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 async-trait.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
+reqwest.workspace = true
 
 # Crate-specific dependencies
 # Example: for git operations

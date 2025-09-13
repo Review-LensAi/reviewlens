@@ -25,6 +25,12 @@ model = "gpt-4-turbo"
 # A value between 0.0 and 1.0 is recommended for review tasks.
 temperature = 0.2
 
+# API key for the selected provider. Required for non-local providers.
+api_key = "YOUR_API_KEY"
+
+# Optional: override the base URL if using a proxy or self-hosted endpoint.
+# base_url = "https://api.openai.com/v1/chat/completions"
+
 
 # --- Rule and Scanner Configuration ---
 [rules]

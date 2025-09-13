@@ -5,7 +5,7 @@
 
 use crate::error::{EngineError, Result};
 use serde::Deserialize;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
@@ -18,12 +18,24 @@ pub struct Config {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
+pub enum Provider {
+    Openai,
+    Anthropic,
+    Deepseek,
+    Local,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct LlmConfig {
-    pub provider: String,
+    pub provider: Provider,
     pub model: String,
     #[serde(default)]
     pub temperature: f32,
-    // Example: api_key, base_url, etc. would go here, maybe in a nested struct.
+    #[serde(default)]
+    pub api_key: Option<String>,
+    #[serde(default)]
+    pub base_url: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]

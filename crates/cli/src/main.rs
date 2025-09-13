@@ -40,9 +40,26 @@ async fn main() -> anyhow::Result<()> {
 
     let cli = Cli::parse();
 
-    let config = engine::config::Config::load_from_path(&cli.config)
-        .with_context(|| format!("failed to load config from {}", cli.config.display()))?;
-    let engine = ReviewEngine::new(config);
+    // Placeholder: Load config and initialize the engine
+    // In a real app, you'd load this from a `reviewer.toml` file.
+    let config = engine::config::Config {
+        llm: engine::config::LlmConfig {
+            provider: engine::config::Provider::Local,
+            model: "dummy".to_string(),
+            temperature: 0.1,
+            api_key: None,
+            base_url: None,
+        },
+        project: engine::config::ProjectConfig {
+            include: vec!["**/*".to_string()],
+            exclude: vec!["target/*".to_string(), ".git/*".to_string()],
+        },
+        rules: engine::config::RulesConfig {
+            owasp_top_5: true,
+            secrets: true,
+        },
+    };
+    let engine = ReviewEngine::new(config)?;
 
     // Execute the subcommand
     match cli.command {
