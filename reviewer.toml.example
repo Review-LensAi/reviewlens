@@ -8,6 +8,10 @@
 # If provided, the engine will load this index at startup.
 index-path = ".reviewer/index/index.json"
 
+# Minimum issue severity that triggers a non-zero exit code.
+# Defaults to "low" if omitted.
+fail-on = "low"
+
 [paths]
 # Paths to include (allow) in the analysis. Globs are supported.
 allow = ["src/**/*.rs", "crates/**/*.rs"]

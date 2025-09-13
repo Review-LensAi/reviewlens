@@ -27,6 +27,7 @@ pub struct CheckArgs {
     pub output: String,
 
     /// Minimum issue severity that will trigger a non-zero exit.
+    /// Defaults to the `fail-on` setting in `reviewer.toml` (`low` if unset).
     #[arg(long, value_enum)]
     pub fail_on: Option<Severity>,
 }
@@ -81,11 +82,11 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
                 "@{u}",
             ])
             .output()
-            .map_err(|e| {
-                EngineError::Config(format!("failed to detect upstream base: {}", e))
-            })?;
+            .map_err(|e| EngineError::Config(format!("failed to detect upstream base: {}", e)))?;
         if !upstream_output.status.success() {
-            return Err(EngineError::Config("failed to detect upstream base reference".into()).into());
+            return Err(
+                EngineError::Config("failed to detect upstream base reference".into()).into(),
+            );
         }
         String::from_utf8(upstream_output.stdout)
             .context("upstream output was not valid UTF-8")?
@@ -129,19 +130,15 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
     log::info!("\nReview complete. Report written to {}.", args.output);
 
     // 4. Determine if issues exceed the severity threshold.
-    let mut issues_found = false;
-    if let Some(threshold) = args.fail_on {
-        let max_severity = report
-            .issues
-            .iter()
-            .map(|issue| issue.severity.clone())
-            .max();
-        if let Some(max) = max_severity {
-            if max >= threshold {
-                issues_found = true;
-            }
-        }
-    }
+    let threshold = args
+        .fail_on
+        .unwrap_or_else(|| engine.config().fail_on.clone());
+    let issues_found = report
+        .issues
+        .iter()
+        .map(|issue| issue.severity.clone())
+        .max()
+        .map_or(false, |max| max >= threshold);
 
     Ok(issues_found)
 }

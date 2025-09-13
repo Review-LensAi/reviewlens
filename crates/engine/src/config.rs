@@ -31,6 +31,8 @@ pub struct Config {
     pub index_path: Option<String>,
     #[serde(default)]
     pub rules: RulesConfig,
+    #[serde(default = "default_fail_on")]
+    pub fail_on: Severity,
 }
 
 // As per PRD: `null | openai | anthropic | deepseek`
@@ -246,6 +248,11 @@ impl Default for Config {
             paths: PathsConfig::default(),
             index_path: Some(DEFAULT_INDEX_PATH.to_string()),
             rules: RulesConfig::default(),
+            fail_on: default_fail_on(),
         }
     }
+}
+
+fn default_fail_on() -> Severity {
+    Severity::Low
 }
