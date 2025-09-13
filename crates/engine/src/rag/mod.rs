@@ -5,7 +5,9 @@
 
 use crate::error::{EngineError, Result};
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::Path;
 use walkdir::WalkDir;
 
 /// A trait for a vector store that can store and retrieve embeddings.
@@ -74,7 +76,7 @@ impl RagContextRetriever {
 }
 
 /// A simple in-memory vector store for demonstration purposes.
-#[derive(Default)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct InMemoryVectorStore {
     documents: Vec<String>,
 }
@@ -90,6 +92,24 @@ impl VectorStore for InMemoryVectorStore {
     /// Returns up to `top_k` documents from the in-memory store.
     async fn search(&self, _query_embedding: Vec<f32>, top_k: usize) -> Result<Vec<String>> {
         Ok(self.documents.iter().take(top_k).cloned().collect())
+    }
+}
+
+impl InMemoryVectorStore {
+    /// Saves the vector store to the given path in JSON format.
+    pub fn save_to_disk<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        let data = serde_json::to_vec(&self)
+            .map_err(|e| EngineError::Rag(format!("Failed to serialize store: {e}")))?;
+        fs::write(path, data)?;
+        Ok(())
+    }
+
+    /// Loads the vector store from the given path. If the file does not
+    /// exist or cannot be deserialized, an error is returned.
+    pub fn load_from_disk<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let data = fs::read(path)?;
+        serde_json::from_slice(&data)
+            .map_err(|e| EngineError::Rag(format!("Failed to deserialize store: {e}")))
     }
 }
 
