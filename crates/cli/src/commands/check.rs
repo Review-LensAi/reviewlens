@@ -121,6 +121,17 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
         result?
     };
 
+    // Print the summary and hotspots to stdout for quick visibility.
+    println!("Summary: {}", report.summary);
+    if report.hotspots.is_empty() {
+        println!("No hotspots identified.");
+    } else {
+        println!("Top hotspots:");
+        for spot in &report.hotspots {
+            println!("- {}", spot);
+        }
+    }
+
     // 3. Generate the markdown report and write it to `args.output`.
     let generator = MarkdownGenerator;
     let report_md = generator

@@ -91,8 +91,11 @@ fn check_command_respects_path_argument() {
         output_str,
     ]);
 
-    cmd.assert().code(0);
+    let output = cmd.output().expect("failed to execute command");
+    assert!(output.status.success());
     assert!(output_path.exists());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.contains("Summary: This is a dummy response from the null provider."));
 }
 
 #[test]

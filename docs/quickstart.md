@@ -22,7 +22,7 @@ Run the agent from the root of your project:
 ```bash
 reviewer-cli check --base-ref main
 ```
-The report is written to `review_report.md`.
+The CLI prints a short summary and the top hotspots to stdout, while the full report is written to `review_report.md`.
 
 ## CI Setup
 The CLI can gate pull requests by exiting non‑zero when issues are found. See the sample configurations in [`docs/ci/`](ci/) for GitHub Actions and GitLab CI examples.
