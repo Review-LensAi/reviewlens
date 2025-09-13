@@ -4,7 +4,7 @@
 # --- Paths Configuration ---
 # Optional path to a pre-built vector index for Retrieval-Augmented Generation.
 # If provided, the engine will load this index at startup.
-index-path = "index.json"
+index-path = ".reviewer/index/index.json"
 
 [paths]
 # Paths to include (allow) in the analysis. Globs are supported.

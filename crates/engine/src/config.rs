@@ -8,8 +8,8 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-/// Default filename for the RAG index.
-pub const DEFAULT_INDEX_PATH: &str = "index.json";
+/// Default path for the RAG index file.
+pub const DEFAULT_INDEX_PATH: &str = ".reviewer/index/index.json";
 
 // As per PRD section 9
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
