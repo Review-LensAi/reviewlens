@@ -74,9 +74,16 @@ impl RagContextRetriever {
 }
 
 /// A simple in-memory vector store for demonstration purposes.
-#[derive(Default)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct InMemoryVectorStore {
     documents: Vec<String>,
+}
+
+impl InMemoryVectorStore {
+    /// Returns the number of documents stored.
+    pub fn len(&self) -> usize {
+        self.documents.len()
+    }
 }
 
 #[async_trait]
@@ -95,7 +102,7 @@ impl VectorStore for InMemoryVectorStore {
 
 /// Indexes all files under `path` and populates an `InMemoryVectorStore`.
 pub async fn index_repository(path: &str, force: bool) -> Result<InMemoryVectorStore> {
-    println!("Indexing repository at {} (force={})", path, force);
+    log::info!("Indexing repository at {} (force={})", path, force);
     let mut store = InMemoryVectorStore::default();
 
     for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
@@ -106,5 +113,6 @@ pub async fn index_repository(path: &str, force: bool) -> Result<InMemoryVectorS
         }
     }
 
+    log::info!("Indexed {} files", store.len());
     Ok(store)
 }
