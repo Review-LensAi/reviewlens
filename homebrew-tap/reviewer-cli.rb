@@ -1,4 +1,4 @@
-class ReviewerCli < Formula
+class ReviewLens < Formula
   desc "CLI for the Intelligent Code Review Agent"
   homepage "https://github.com/Review-LensAi/reviewlens"
   version "1.0.0"
