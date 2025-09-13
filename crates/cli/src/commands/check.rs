@@ -2,6 +2,7 @@
 
 use clap::Args;
 use engine::ReviewEngine;
+use log::info;
 
 #[derive(Args, Debug)]
 pub struct CheckArgs {
@@ -20,10 +21,10 @@ pub struct CheckArgs {
 
 /// Executes the `check` subcommand.
 pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<()> {
-    println!("Running 'check' with the following arguments:");
-    println!("  Diff base: {}", args.diff);
-    println!("  Path: {}", args.path);
-    println!("  Output: {}", args.output);
+    info!("Running 'check' with the following arguments:");
+    info!("  Diff base: {}", args.diff);
+    info!("  Path: {}", args.path);
+    info!("  Output: {}", args.output);
 
     // In a real implementation:
     // 1. Use git2 or a shell command to generate the diff from `args.diff`.
@@ -33,7 +34,7 @@ pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<()> {
     engine.run(diff_content).await.map_err(|e| anyhow::anyhow!(e))?;
 
     // 3. Write the report from the engine's output to `args.output`.
-    println!("\nReview complete. Report would be written to {}.", args.output);
+    info!("\nReview complete. Report would be written to {}.", args.output);
 
     // 4. Exit with an appropriate status code for CI.
     // For now, we'll just exit with 0.

@@ -5,6 +5,7 @@
 
 use crate::error::Result;
 use async_trait::async_trait;
+use log::info;
 
 /// A trait for a vector store that can store and retrieve embeddings.
 #[async_trait]
@@ -34,7 +35,7 @@ pub struct RagContextRetriever {
 
 impl RagContextRetriever {
     pub async fn retrieve(&self, query: &str) -> Result<String> {
-        println!("Retrieving RAG context for query: {}", query);
+        info!("Retrieving RAG context for query: {}", query);
         // 1. Generate embedding for the query.
         // 2. Search the vector store.
         // 3. Format and return the results as a string.

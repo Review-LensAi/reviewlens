@@ -6,6 +6,7 @@
 
 use crate::error::Result;
 use async_trait::async_trait;
+use log::info;
 
 /// Represents a response from an LLM.
 pub struct LlmResponse {
@@ -34,9 +35,9 @@ pub struct LocalOnlyProvider;
 #[async_trait]
 impl LlmProvider for LocalOnlyProvider {
     async fn generate(&self, prompt: &str) -> Result<LlmResponse> {
-        println!("--- LLM Call (Local-Only Mode) ---");
-        println!("Prompt: {}", prompt);
-        println!("--- End LLM Call ---");
+        info!("--- LLM Call (Local-Only Mode) ---");
+        info!("Prompt: {}", prompt);
+        info!("--- End LLM Call ---");
 
         Ok(LlmResponse {
             content: "This is a dummy response from the local-only provider.".to_string(),

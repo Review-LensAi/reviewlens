@@ -2,6 +2,7 @@
 
 use clap::Parser;
 use engine::ReviewEngine;
+use log::LevelFilter;
 
 mod commands;
 
@@ -29,10 +30,16 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Initialize logging
-    env_logger::init();
-
     let cli = Cli::parse();
+
+    let mut builder = env_logger::Builder::from_env(env_logger::Env::default());
+    builder.filter_level(match cli.verbose {
+        0 => LevelFilter::Warn,
+        1 => LevelFilter::Info,
+        2 => LevelFilter::Debug,
+        _ => LevelFilter::Trace,
+    });
+    builder.init();
 
     // Placeholder: Load config and initialize the engine
     // In a real app, you'd load this from a `reviewer.toml` file.

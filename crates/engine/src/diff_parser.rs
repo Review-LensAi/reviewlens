@@ -1,6 +1,7 @@
 //! Logic for parsing diffs to identify changed files and hunks.
 
 use crate::error::{EngineError, Result};
+use log::info;
 
 /// Represents a single changed file in a diff.
 #[derive(Debug)]
@@ -43,7 +44,7 @@ pub fn parse(diff_text: &str) -> Result<Vec<ChangedFile>> {
         return Ok(Vec::new());
     }
 
-    println!("Parsing diff...");
+    info!("Parsing diff...");
     // Placeholder logic
     todo!("Implement diff parsing logic.");
 }

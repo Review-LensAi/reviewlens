@@ -20,6 +20,7 @@ pub mod diff_parser;
 
 use crate::config::Config;
 use crate::error::Result;
+use log::info;
 
 /// The main engine struct.
 pub struct ReviewEngine {
@@ -34,8 +35,8 @@ impl ReviewEngine {
 
     /// Runs a complete code review analysis on a given diff.
     pub async fn run(&self, diff: &str) -> Result<()> {
-        println!("Engine running with config: {:?}", self.config);
-        println!("Analyzing diff: {}", diff);
+        info!("Engine running with config: {:?}", self.config);
+        info!("Analyzing diff: {}", diff);
         // 1. Parse the diff.
         // 2. Use scanner to find hard-coded issues.
         // 3. Use RAG to fetch relevant context from the codebase.
