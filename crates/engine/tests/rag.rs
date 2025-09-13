@@ -1,4 +1,4 @@
-use engine::rag::{index_repository, InMemoryVectorStore, RagContextRetriever, VectorStore};
+use engine::rag::{index_repository, Document, InMemoryVectorStore, RagContextRetriever, VectorStore};
 use std::env;
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -8,10 +8,12 @@ use tempfile::tempdir;
 async fn retrieves_context_from_saved_store() {
     // Prepare a store with a known document
     let mut store = InMemoryVectorStore::default();
-    store
-        .add("example context".to_string(), Vec::new())
-        .await
-        .unwrap();
+    let doc = Document {
+        filename: "doc.txt".into(),
+        content: "example context".into(),
+        token_count: 2,
+    };
+    store.add(doc, vec![2.0]).await.unwrap();
 
     // Persist the store to disk
     let mut path = env::temp_dir();

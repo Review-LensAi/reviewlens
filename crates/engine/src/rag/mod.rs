@@ -10,14 +10,22 @@ use std::fs;
 use std::path::Path;
 use walkdir::WalkDir;
 
+/// Represents a single indexed document along with minimal metadata.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Document {
+    pub filename: String,
+    pub content: String,
+    pub token_count: usize,
+}
+
 /// A trait for a vector store that can store and retrieve embeddings.
 #[async_trait]
 pub trait VectorStore {
     /// Adds a document and its vector embedding to the store.
-    async fn add(&mut self, document: String, embedding: Vec<f32>) -> Result<()>;
+    async fn add(&mut self, document: Document, embedding: Vec<f32>) -> Result<()>;
 
     /// Searches for the most similar documents to a given query vector.
-    async fn search(&self, query_embedding: Vec<f32>, top_k: usize) -> Result<Vec<String>>;
+    async fn search(&self, query_embedding: Vec<f32>, top_k: usize) -> Result<Vec<Document>>;
 }
 
 /// A trait for an indexer that processes source code and populates a vector store.
@@ -48,8 +56,9 @@ impl RagContextRetriever {
 
     pub async fn retrieve(&self, query: &str) -> Result<String> {
         log::debug!("Retrieving RAG context for query: {}", query);
-        // 1. Generate embedding for the query.
-        let embedding: Vec<f32> = query.bytes().map(|b| b as f32).collect();
+        // 1. Generate a tiny embedding for the query using token counts.
+        let token_count = query.split_whitespace().count() as f32;
+        let embedding = vec![token_count];
 
         // 2. Search the vector store.
         let top_k = 5;
@@ -67,7 +76,7 @@ impl RagContextRetriever {
         let formatted = results
             .into_iter()
             .enumerate()
-            .map(|(i, doc)| format!("{}. {}", i + 1, doc))
+            .map(|(i, doc)| format!("{}. {}: {}", i + 1, doc.filename, doc.content))
             .collect::<Vec<_>>()
             .join("\n");
 
@@ -78,7 +87,7 @@ impl RagContextRetriever {
 /// A simple in-memory vector store for demonstration purposes.
 #[derive(Default, Serialize, Deserialize)]
 pub struct InMemoryVectorStore {
-    documents: Vec<String>,
+    documents: Vec<Document>,
 }
 
 impl InMemoryVectorStore {
@@ -91,13 +100,13 @@ impl InMemoryVectorStore {
 #[async_trait]
 impl VectorStore for InMemoryVectorStore {
     /// Stores the document in memory. Embeddings are ignored in this simple example.
-    async fn add(&mut self, document: String, _embedding: Vec<f32>) -> Result<()> {
+    async fn add(&mut self, document: Document, _embedding: Vec<f32>) -> Result<()> {
         self.documents.push(document);
         Ok(())
     }
 
     /// Returns up to `top_k` documents from the in-memory store.
-    async fn search(&self, _query_embedding: Vec<f32>, top_k: usize) -> Result<Vec<String>> {
+    async fn search(&self, _query_embedding: Vec<f32>, top_k: usize) -> Result<Vec<Document>> {
         Ok(self.documents.iter().take(top_k).cloned().collect())
     }
 }
@@ -148,8 +157,13 @@ where
     for entry in WalkDir::new(path_ref).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let content = fs::read_to_string(entry.path())?;
-            let embedding: Vec<f32> = content.bytes().map(|b| b as f32).collect();
-            store.add(content, embedding).await?;
+            let tokens = content.split_whitespace().count();
+            let doc = Document {
+                filename: entry.path().display().to_string(),
+                content,
+                token_count: tokens,
+            };
+            store.add(doc, vec![tokens as f32]).await?;
         }
     }
 
