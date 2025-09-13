@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# This script installs the reviewer-cli for Linux and macOS.
+# This script installs the reviewlens for Linux and macOS.
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/Review-LensAi/reviewlens/main/install.sh | sh
@@ -16,7 +16,7 @@ set -e # Exit on error
 # --- Configuration ---
 REPO="Review-LensAi/reviewlens"
 INSTALL_DIR="/usr/local/bin"
-BINARY_NAME="reviewer-cli"
+BINARY_NAME="reviewlens"
 
 # --- Helper Functions ---
 print_info() {

@@ -6,7 +6,7 @@ use tempfile::tempdir;
 
 #[test]
 fn print_config_command_produces_valid_json() {
-    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     let output = cmd
         .arg("print-config")
         .output()
@@ -31,7 +31,7 @@ fn print_config_command_produces_valid_json() {
 
 #[test]
 fn version_command_displays_version() {
-    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     let output = cmd
         .arg("version")
         .output()
@@ -80,7 +80,7 @@ fn check_command_respects_path_argument() {
     let output_path = repo.join("out.md");
     let output_str = output_path.to_str().unwrap();
 
-    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
         "check",
         "--path",
@@ -132,7 +132,7 @@ fn check_command_reports_issues_and_exit_code() {
     // Modify file to introduce a secret
     fs::write(repo.join("file.txt"), "api_key = \"ABCDEFGHIJKLMNOP\"\n").unwrap();
 
-    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args(["check", "--path", repo_str, "--base-ref", "HEAD"]);
 
     cmd.assert().code(1);
@@ -178,7 +178,7 @@ fn check_command_respects_fail_on_from_config() {
     let config_path = repo.join("reviewer.toml");
     let config_str = config_path.to_str().unwrap();
 
-    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
         "--config",
         config_str,
@@ -226,7 +226,7 @@ fn check_command_without_upstream_or_base_ref_errors() {
     // Modify file to create diff
     fs::write(repo.join("file.txt"), "hello world\n").unwrap();
 
-    let mut cmd = Command::cargo_bin("reviewer-cli").unwrap();
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args(["check", "--path", repo_str]);
 
     cmd.assert().code(3);

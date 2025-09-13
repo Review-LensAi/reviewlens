@@ -16,7 +16,7 @@ Our goal is to build an agent that slashes review time while improving code qual
 
 ## Installation
 
-We offer several methods to install the `reviewer-cli`. Choose the one that best fits your workflow.
+We offer several methods to install the `reviewlens`. Choose the one that best fits your workflow.
 
 ### Install Script (Recommended for Linux & macOS)
 
@@ -26,30 +26,30 @@ You can install the latest version using our installer script. It will automatic
 curl -fsSL https://raw.githubusercontent.com/Review-LensAi/reviewlens/main/install.sh | sh
 ```
 
-The script will place the `reviewer-cli` binary in `/usr/local/bin` and may prompt for `sudo` access.
+The script will place the `reviewlens` binary in `/usr/local/bin` and may prompt for `sudo` access.
 
 ### GitHub Releases (Linux, macOS, Windows)
 
 You can download pre-compiled binaries directly from the [GitHub Releases page](https://github.com/Review-LensAi/reviewlens/releases).
 
-Download the appropriate archive for your operating system, extract it, and place the `reviewer-cli` (or `reviewer-cli.exe`) binary in a directory included in your system's `PATH`.
+Download the appropriate archive for your operating system, extract it, and place the `reviewlens` (or `reviewlens.exe`) binary in a directory included in your system's `PATH`.
 
 Each release also provides a `.sha256` checksum and a `.sig` signature file generated with [cosign](https://github.com/sigstore/cosign). After downloading an archive, you can verify its integrity and authenticity:
 
 ```bash
 # Verify the checksum
-sha256sum -c reviewer-cli-<TARGET>.tar.gz.sha256
+sha256sum -c reviewlens-<TARGET>.tar.gz.sha256
 
 # Verify the signature (requires cosign)
-cosign verify-blob --signature reviewer-cli-<TARGET>.tar.gz.sig reviewer-cli-<TARGET>.tar.gz
+cosign verify-blob --signature reviewlens-<TARGET>.tar.gz.sig reviewlens-<TARGET>.tar.gz
 ```
 
 ### With `cargo` (Requires Rust)
 
-If you have the Rust toolchain installed, you can build and install `reviewer-cli` from crates.io.
+If you have the Rust toolchain installed, you can build and install `reviewlens` from crates.io.
 
 ```bash
-cargo install reviewer-cli
+cargo install reviewlens
 ```
 *(Note: The crate is not yet published. This will be available in a future release.)*
 
@@ -58,14 +58,14 @@ cargo install reviewer-cli
 For a containerized environment, pull the pre-built image from GitHub's container registry.
 
 ```bash
-docker pull ghcr.io/some-org/reviewer-cli:latest
-docker run --rm -v "$(pwd):/work" ghcr.io/some-org/reviewer-cli:latest check --base-ref main
+docker pull ghcr.io/some-org/reviewlens:latest
+docker run --rm -v "$(pwd):/work" ghcr.io/some-org/reviewlens:latest check --base-ref main
 ```
 
 You can also build the image locally:
 
 ```bash
-docker build -t reviewer-cli .
+docker build -t reviewlens .
 ```
 
 ### From Source
@@ -82,12 +82,12 @@ If you prefer to build from source, you can clone the repository and build the C
     ```bash
     cargo build --release
     ```
-    The binary will be available at `target/release/reviewer-cli`. You can add this to your `PATH` or use it directly.
+    The binary will be available at `target/release/reviewlens`. You can add this to your `PATH` or use it directly.
 
 
 ## Getting Started
 
-After installing `reviewer-cli`, follow these steps to get started.
+After installing `reviewlens`, follow these steps to get started.
 
 ### 1. Configuration
 
@@ -109,12 +109,12 @@ For example, `--llm-provider anthropic` overrides `REVIEWER_LLM_PROVIDER`, which
 
 ### 2. Usage
 
-The primary command is `reviewer-cli check`. It analyzes the difference between your current branch and a base branch (e.g., `main`).
+The primary command is `reviewlens check`. It analyzes the difference between your current branch and a base branch (e.g., `main`).
 
 Run a review from the root of your project:
 ```bash
 # Run a review against the 'main' branch
-reviewer-cli check --base-ref main
+reviewlens check --base-ref main
 ```
 
 By default, the command exits with a non-zero status if any issue of
