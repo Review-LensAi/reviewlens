@@ -1,6 +1,7 @@
 //! The `index` subcommand.
 
 use clap::Args;
+use engine::rag::index_repository;
 use engine::ReviewEngine;
 
 #[derive(Args, Debug)]
@@ -25,6 +26,5 @@ pub async fn run(args: IndexArgs, _engine: &ReviewEngine) -> anyhow::Result<()> 
     // 2. Call the engine's indexing module to create or update the RAG index.
     log::info!("\nIndexing would be performed here.");
     log::info!("This process would scan the codebase and populate a vector store for RAG.");
-
     Ok(())
 }

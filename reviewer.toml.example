@@ -1,39 +1,65 @@
 # Example configuration for the Intelligent Code Review Agent.
 # Copy this file to `reviewer.toml` and customize it for your project.
 
-# --- Project-Specific Settings ---
-[project]
-# Globs for files to include in the analysis.
-# Defaults to all files if not specified.
-include = ["src/**/*.rs", "crates/**/*.rs"]
+# --- Paths Configuration ---
+[paths]
+# Paths to include (allow) in the analysis. Globs are supported.
+allow = ["src/**/*.rs", "crates/**/*.rs"]
 
-# Globs for files to exclude from the analysis.
-# It's a good practice to exclude build artifacts, vendor directories, and test data.
-exclude = ["target/*", "**/testdata/*"]
+# Paths to exclude (deny) from the analysis.
+deny = ["target/*", "**/testdata/*"]
 
 
 # --- LLM Provider Configuration ---
 [llm]
-# The provider to use. Supported: "openai", "anthropic", "deepseek", "local".
-# "local" uses a dummy provider for offline/testing mode.
-provider = "openai"
+# The provider to use. Supported: "openai", "anthropic", "deepseek", "null".
+# "null" uses a dummy provider for offline/testing mode.
+provider = "null"
 
 # The specific model to use for analysis (e.g., "gpt-4-turbo", "claude-3-opus-20240229").
 model = "gpt-4-turbo"
 
-# The temperature for the LLM. Lower is more deterministic, higher is more creative.
-# A value between 0.0 and 1.0 is recommended for review tasks.
-temperature = 0.2
-
-# API key for the selected provider. Required for non-local providers.
-api_key = "YOUR_API_KEY"
+# API key for the selected provider. Required for non-null providers.
+# api_key = "YOUR_API_KEY"
 
 # Optional: override the base URL if using a proxy or self-hosted endpoint.
 # base_url = "https://api.openai.com/v1/chat/completions"
 
 
+# --- Budget Configuration ---
+[budget.tokens]
+# Maximum tokens available per run (optional).
+# max-per-run = 100000
+
+
+# --- Generation Settings ---
+[generation]
+# Controls generation behaviour such as temperature.
+temperature = 0.2
+
+
+# --- Privacy Settings ---
+[privacy.redaction]
+# Enable redaction of sensitive content from prompts and logs.
+enabled = true
+# Regular expression patterns to redact.
+patterns = []
+
+
 # --- Rule and Scanner Configuration ---
-[rules]
-# Enable/disable specific built-in scanners.
-owasp_top_5 = true
-secrets = true
+[rules.secrets]
+enabled = true
+severity = "medium"
+
+[rules.sql-injection-go]
+enabled = true
+severity = "medium"
+
+[rules.http-timeouts-go]
+enabled = true
+severity = "medium"
+
+[rules.convention-deviation]
+enabled = true
+severity = "medium"
+
