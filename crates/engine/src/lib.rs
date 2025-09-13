@@ -27,6 +27,7 @@ use crate::scanner::Scanner;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use regex::Regex;
 use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -107,8 +108,8 @@ impl ReviewEngine {
             })
             .collect();
 
-        // Aggregate hotspots based on line churn.
-        let mut file_changes = Vec::new();
+        // Track line churn per file; hotspots are computed after scanning.
+        let mut churn_counts: HashMap<String, usize> = HashMap::new();
         for file in &filtered_files {
             let mut changes = 0usize;
             for hunk in &file.hunks {
@@ -121,15 +122,8 @@ impl ReviewEngine {
                     }
                 }
             }
-            file_changes.push((file.path.clone(), changes));
+            churn_counts.insert(file.path.clone(), changes);
         }
-        file_changes.sort_by(|a, b| b.1.cmp(&a.1));
-        let hotspots: Vec<String> = file_changes
-            .into_iter()
-            .filter(|(_, count)| *count > 0)
-            .take(5)
-            .map(|(path, count)| format!("{path} ({count} changes)"))
-            .collect();
 
         // 2. Run configured scanners on the filtered files, limiting results to diff hunks.
         let mut issues = Vec::new();
@@ -207,6 +201,30 @@ impl ReviewEngine {
         };
 
         // 4. Retrieve RAG context for flagged regions.
+        // Aggregate hotspots using configurable severity and churn weights.
+        let mut issue_counts: HashMap<String, usize> = HashMap::new();
+        for issue in &issues {
+            *issue_counts.entry(issue.file_path.clone()).or_insert(0) += 1;
+        }
+        let sev_w = self.config.report.hotspot_weights.severity;
+        let churn_w = self.config.report.hotspot_weights.churn;
+        let mut file_risks: Vec<(String, u32)> = churn_counts
+            .into_iter()
+            .map(|(path, churn)| {
+                let findings = issue_counts.get(&path).copied().unwrap_or(0) as u32;
+                let risk = sev_w * findings + churn_w * (churn as u32);
+                (path, risk)
+            })
+            .collect();
+        file_risks.sort_by(|a, b| b.1.cmp(&a.1));
+        let hotspots: Vec<String> = file_risks
+            .into_iter()
+            .filter(|(_, risk)| *risk > 0)
+            .take(5)
+            .map(|(path, risk)| format!("{path} (risk {risk})"))
+            .collect();
+
+        // 3. Retrieve RAG context for flagged regions.
         let vector_store: Box<dyn VectorStore + Send + Sync> =
             if let Some(path) = &self.config.index_path {
                 match InMemoryVectorStore::load_from_disk(path) {

@@ -9,7 +9,7 @@ The CLI will report an authentication error if no API key is supplied for a remo
 If the provider or model name is incorrect, the CLI exits with an error. Check the values in your configuration match a supported provider and model.
 
 ## No Files Reviewed
-When `reviewer-cli` reports that no files were analyzed, verify that `paths.allow` includes the files you expect and that they exist in the repository.
+When `reviewlens` reports that no files were analyzed, verify that `paths.allow` includes the files you expect and that they exist in the repository.
 
 ## Network Errors
 Connectivity problems can cause requests to fail. If you need an offline run, keep `provider = "null"` to use the built-in local mode.

@@ -15,7 +15,7 @@ for i in "${!fixtures[@]}"; do
 
   rm -rf "$dir/.git" "$dir/index.json" "$dir/review_report.md"
 
-  cargo run --quiet -p reviewer-cli -- --config "$dir/reviewer.toml" index --path "$dir" --output "$dir/index.json" >/dev/null
+  cargo run --quiet -p reviewlens -- --config "$dir/reviewer.toml" index --path "$dir" --output "$dir/index.json" >/dev/null
 
   git -C "$dir" init -q
   git -C "$dir" commit -qm init --allow-empty
@@ -23,7 +23,7 @@ for i in "${!fixtures[@]}"; do
   git -C "$dir" reset index.json reviewer.toml 2>/dev/null || true
 
   start=$(date +%s%N)
-  cargo run --quiet -p reviewer-cli -- --config "$dir/reviewer.toml" check --path "$dir" --diff HEAD --output "$dir/review_report.md" >/dev/null
+  cargo run --quiet -p reviewlens -- --config "$dir/reviewer.toml" check --path "$dir" --diff HEAD --output "$dir/review_report.md" >/dev/null
   end=$(date +%s%N)
   runtime=$(( (end-start)/1000000 ))
   total_time=$(( total_time + runtime ))

@@ -1,6 +1,6 @@
 # Quickstart
 
-This guide helps you install and run the `reviewer-cli` locally or in CI.
+This guide helps you install and run the `reviewlens` locally or in CI.
 
 ## Installation
 - Use the install script:
@@ -17,10 +17,17 @@ This guide helps you install and run the `reviewer-cli` locally or in CI.
    ```
 2. Set your LLM provider and API key. Configuration values can also be supplied via environment variables or CLI flags.
 
+## Inspect Effective Configuration
+After configuring, you can inspect the merged settings, compiled providers, and the detected base reference:
+```bash
+reviewer-cli print-config
+```
+Look for the `Base ref:` line in the output to see which upstream branch will be used for diffs.
+
 ## Running a Review
 Run the agent from the root of your project:
 ```bash
-reviewer-cli check --base-ref main
+reviewlens check --base-ref main
 ```
 The CLI prints a short summary and the top hotspots to stdout, while the full report is written to `review_report.md`.
 
