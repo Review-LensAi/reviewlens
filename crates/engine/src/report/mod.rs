@@ -5,6 +5,30 @@
 
 use crate::error::Result;
 use crate::{config::Config, scanner::Issue};
+use serde::Serialize;
+
+/// Timing information for a run.
+#[derive(Serialize, Clone)]
+pub struct TimingInfo {
+    /// Total duration of the engine run in milliseconds.
+    pub total_ms: u128,
+}
+
+/// Metadata captured during a review run.
+#[derive(Serialize, Clone)]
+pub struct RuntimeMetadata {
+    /// Version of the ruleset used during the run.
+    pub ruleset_version: String,
+    /// Identifier of the language model, if applicable.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    /// Identifier for the driver/provider used.
+    pub driver: String,
+    /// Timing metrics for the run.
+    pub timings: TimingInfo,
+    /// Whether the vector index was warm (true) or cold (false).
+    pub index_warm: bool,
+}
 
 /// Represents the final, consolidated review findings.
 pub struct ReviewReport {
@@ -17,6 +41,8 @@ pub struct ReviewReport {
     /// Optional Mermaid diagram describing flows or relationships.
     pub mermaid_diagram: Option<String>,
     pub config: Config,
+    /// Runtime metadata such as model identifiers and timings.
+    pub metadata: RuntimeMetadata,
 }
 
 /// A trait for generating a report from review findings.
@@ -118,7 +144,16 @@ impl ReportGenerator for MarkdownGenerator {
         }
 
         md.push_str("\n---\n\n");
-        md.push_str("## Appendix: Configuration Snapshot\n\n");
+        md.push_str("## Appendix\n\n");
+
+        md.push_str("### Run Metadata\n\n");
+        md.push_str("```json\n");
+        let metadata_json = serde_json::to_string_pretty(&report.metadata)
+            .map_err(|e| crate::error::EngineError::Report(e.to_string()))?;
+        md.push_str(&metadata_json);
+        md.push_str("\n```\n\n");
+
+        md.push_str("### Configuration Snapshot\n\n");
         md.push_str("This review was run with the following configuration:\n\n");
         md.push_str("```json\n");
         let config_json = serde_json::to_string_pretty(&report.config)
