@@ -43,6 +43,8 @@ impl Scanner for SecretsScanner {
                         file_path: file_path.to_string(),
                         line_number: i + 1,
                         severity: config.rules.secrets.severity.clone(),
+                        suggested_fix: Some("Remove secrets from source control and use secure storage or environment variables.".to_string()),
+                        diff: Some(format!("-{}\n+<redacted>", line.trim())),
                     });
                     // Don't flag the same line multiple times
                     break;

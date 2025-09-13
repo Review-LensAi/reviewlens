@@ -31,6 +31,12 @@ impl Scanner for ServerXssGoScanner {
                     file_path: file_path.to_string(),
                     line_number: i + 1,
                     severity: config.rules.server_xss_go.severity.clone(),
+                    suggested_fix: Some("Use html/template which auto-escapes HTML.".to_string()),
+                    diff: Some(format!(
+                        "-{}\n+{}",
+                        line.trim(),
+                        line.replace("text/template", "html/template").trim()
+                    )),
                 });
             }
             if UNSAFE_WRITE_REGEX.is_match(line) {
@@ -42,6 +48,13 @@ impl Scanner for ServerXssGoScanner {
                     file_path: file_path.to_string(),
                     line_number: i + 1,
                     severity: config.rules.server_xss_go.severity.clone(),
+                    suggested_fix: Some(
+                        "Escape user input before writing to the response.".to_string(),
+                    ),
+                    diff: Some(format!(
+                        "-{}\n+// escape user input before writing",
+                        line.trim()
+                    )),
                 });
             }
         }
