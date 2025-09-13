@@ -235,5 +235,5 @@ fn check_command_without_upstream_or_base_ref_errors() {
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args(["check", "--path", repo_str]);
 
-    cmd.assert().code(3);
+    cmd.assert().code(2);
 }
