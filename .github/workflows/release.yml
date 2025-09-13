@@ -34,8 +34,18 @@ jobs:
           toolchain: stable
           target: ${{ matrix.target }}
 
+      - name: Install cargo-audit and cargo-deny
+        run: |
+          cargo install --locked cargo-audit cargo-deny
+
       - name: Build binary
         run: cargo build --release --bin reviewlens --target ${{ matrix.target }}
+
+      - name: Run cargo audit
+        run: cargo audit
+
+      - name: Run cargo deny
+        run: cargo deny check licenses
 
       - name: Package binary
         id: package
