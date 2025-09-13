@@ -19,12 +19,14 @@ pub mod report;
 pub mod scanner;
 
 use crate::config::Config;
-use crate::error::Result;
+use crate::error::{EngineError, Result};
 use crate::llm::{create_llm_provider, LlmProvider};
 use crate::rag::{InMemoryVectorStore, RagContextRetriever};
 use crate::report::ReviewReport;
 use crate::scanner::Scanner;
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use std::fs;
+use std::path::Path;
 use regex::Regex;
 
 /// Placeholder used when redacting sensitive information.
@@ -60,7 +62,11 @@ impl ReviewEngine {
     pub fn new(config: Config) -> Result<Self> {
         let llm = create_llm_provider(&config)?;
         let scanners = crate::scanner::load_enabled_scanners(&config);
-        Ok(Self { config,scanners, llm })
+        Ok(Self {
+            config,
+            scanners,
+            llm,
+        })
     }
 
     /// Runs a complete code review analysis on a given diff.
@@ -71,9 +77,22 @@ impl ReviewEngine {
         // 1. Parse the diff to identify changed files and hunks.
         let changed_files = diff_parser::parse(diff)?;
 
-        // 2. Run configured scanners on the changed files.
+        // Build globsets for allowed and denied paths.
+        let allow_set = build_globset(&self.config.paths.allow)?;
+        let deny_set = build_globset(&self.config.paths.deny)?;
+
+        // Filter changed files based on glob patterns.
+        let filtered_files: Vec<_> = changed_files
+            .into_iter()
+            .filter(|file| {
+                let path = Path::new(&file.path);
+                allow_set.is_match(path) && !deny_set.is_match(path)
+            })
+            .collect();
+
+        // 2. Run configured scanners on the filtered files.
         let mut issues = Vec::new();
-        for file in changed_files {
+        for file in filtered_files {
             let content = fs::read_to_string(&file.path)?;
             for scanner in &self.scanners {
                 let mut found = scanner.scan(&file.path, &content, &self.config)?;
@@ -122,4 +141,15 @@ impl ReviewEngine {
 
         Ok(report)
     }
+}
+
+fn build_globset(patterns: &[String]) -> Result<GlobSet> {
+    let mut builder = GlobSetBuilder::new();
+    for pattern in patterns {
+        let glob = Glob::new(pattern).map_err(|e| EngineError::Config(e.to_string()))?;
+        builder.add(glob);
+    }
+    builder
+        .build()
+        .map_err(|e| EngineError::Config(e.to_string()))
 }
