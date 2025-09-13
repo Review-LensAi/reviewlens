@@ -11,31 +11,36 @@
 
 // Public modules
 pub mod config;
+pub mod diff_parser;
 pub mod error;
 pub mod llm;
 pub mod rag;
 pub mod report;
 pub mod scanner;
-pub mod diff_parser;
 
 use crate::config::Config;
 use crate::error::Result;
+use crate::scanner::Scanner;
 
 /// The main engine struct.
 pub struct ReviewEngine {
     config: Config,
+    scanners: Vec<Box<dyn Scanner>>,
 }
 
 impl ReviewEngine {
     /// Creates a new instance of the review engine from a given configuration.
     pub fn new(config: Config) -> Self {
-        Self { config }
+        let scanners = crate::scanner::load_enabled_scanners(&config);
+        Self { config, scanners }
     }
 
     /// Runs a complete code review analysis on a given diff.
     pub async fn run(&self, diff: &str) -> Result<()> {
         println!("Engine running with config: {:?}", self.config);
         println!("Analyzing diff: {}", diff);
+        let loaded: Vec<&str> = self.scanners.iter().map(|s| s.name()).collect();
+        println!("Loaded scanners: {:?}", loaded);
         // 1. Parse the diff.
         // 2. Use scanner to find hard-coded issues.
         // 3. Use RAG to fetch relevant context from the codebase.
