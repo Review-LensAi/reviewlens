@@ -21,7 +21,7 @@ pub mod scanner;
 use crate::config::Config;
 use crate::error::{EngineError, Result};
 use crate::llm::{create_llm_provider, LlmProvider};
-use crate::rag::{InMemoryVectorStore, RagContextRetriever};
+use crate::rag::{InMemoryVectorStore, RagContextRetriever, VectorStore};
 use crate::report::ReviewReport;
 use crate::scanner::Scanner;
 use globset::{Glob, GlobSet, GlobSetBuilder};
@@ -101,14 +101,22 @@ impl ReviewEngine {
         }
 
         // 3. Retrieve RAG context for flagged regions.
-        let rag = RagContextRetriever::new(Box::new(InMemoryVectorStore::default()));
+        let vector_store: Box<dyn VectorStore + Send + Sync> = if let Some(path) = &self.config.index_path {
+            match InMemoryVectorStore::load_from_disk(path) {
+                Ok(store) => Box::new(store),
+                Err(e) => {
+                    log::warn!("Failed to load vector index from {}: {}", path, e);
+                    Box::new(InMemoryVectorStore::default())
+                }
+            }
+        } else {
+            Box::new(InMemoryVectorStore::default())
+        };
+        let rag = RagContextRetriever::new(vector_store);
         let mut contexts = Vec::new();
         for issue in &issues {
             if let Ok(ctx) = rag
-                .retrieve(&format!(
-                    "{}:{} {}",
-                    issue.file_path, issue.line_number, issue.description
-                ))
+                .retrieve(&format!("{}:{} {}", issue.file_path, issue.line_number, issue.description))
                 .await
             {
                 contexts.push(ctx);
