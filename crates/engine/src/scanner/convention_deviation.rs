@@ -16,8 +16,14 @@ use std::fs;
 pub struct ConventionDeviationScanner;
 
 #[derive(Deserialize)]
+struct IndexedDocument {
+    filename: String,
+    content: String,
+}
+
+#[derive(Deserialize)]
 struct IndexStore {
-    documents: Vec<String>,
+    documents: Vec<IndexedDocument>,
 }
 
 struct ConventionPattern {
@@ -25,21 +31,44 @@ struct ConventionPattern {
     description: &'static str,
 }
 
-fn derive_patterns(docs: &[String]) -> Vec<ConventionPattern> {
+fn derive_patterns(docs: &[IndexedDocument]) -> (Vec<ConventionPattern>, bool) {
     let mut patterns = Vec::new();
-    if docs.iter().all(|d| !d.contains("println!")) {
+    if docs
+        .iter()
+        .all(|d| !d.content.contains("println!") && !d.content.contains("eprintln!"))
+    {
         patterns.push(ConventionPattern {
-            regex: Regex::new("println!").unwrap(),
-            description: "Use logging macros instead of println!",
+            regex: Regex::new("println!|eprintln!").unwrap(),
+            description: "Use logging macros instead of println!/eprintln!",
         });
     }
-    if docs.iter().all(|d| !d.contains(".unwrap()")) {
+    if docs.iter().all(|d| !d.content.contains(".unwrap()")) {
         patterns.push(ConventionPattern {
             regex: Regex::new(r"\.unwrap\(\)").unwrap(),
             description: "Avoid unwrap(); use proper error handling",
         });
     }
-    patterns
+    if docs.iter().all(|d| !d.content.contains(".expect(")) {
+        patterns.push(ConventionPattern {
+            regex: Regex::new(r"\.expect\(").unwrap(),
+            description: "Avoid expect(); use proper error handling",
+        });
+    }
+
+    let fn_re = Regex::new(r"fn\s+\w+[^\n]*").unwrap();
+    let mut total_fns = 0;
+    let mut result_fns = 0;
+    for doc in docs {
+        for m in fn_re.find_iter(&doc.content) {
+            total_fns += 1;
+            if m.as_str().contains("->") && m.as_str().contains("Result<") {
+                result_fns += 1;
+            }
+        }
+    }
+    let require_result = total_fns > 0 && result_fns == total_fns;
+
+    (patterns, require_result)
 }
 
 impl Scanner for ConventionDeviationScanner {
@@ -61,8 +90,9 @@ impl Scanner for ConventionDeviationScanner {
             Ok(s) => s,
             Err(_) => return Ok(issues),
         };
-        let patterns = derive_patterns(&store.documents);
+        let (patterns, require_result) = derive_patterns(&store.documents);
         for (i, line) in content.lines().enumerate() {
+            let mut matched = false;
             for pat in &patterns {
                 if pat.regex.is_match(line) {
                     issues.push(Issue {
@@ -72,7 +102,20 @@ impl Scanner for ConventionDeviationScanner {
                         line_number: i + 1,
                         severity: config.rules.convention_deviation.severity.clone(),
                     });
+                    matched = true;
                     break;
+                }
+            }
+            if !matched && require_result {
+                let trimmed = line.trim_start();
+                if trimmed.starts_with("fn ") && !trimmed.contains("Result<") {
+                    issues.push(Issue {
+                        title: "Convention deviation detected".to_string(),
+                        description: "Functions should return Result<T, E>".to_string(),
+                        file_path: file_path.to_string(),
+                        line_number: i + 1,
+                        severity: config.rules.convention_deviation.severity.clone(),
+                    });
                 }
             }
         }

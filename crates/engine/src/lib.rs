@@ -101,12 +101,30 @@ impl ReviewEngine {
             })
             .collect();
 
-        // 2. Run configured scanners on the filtered files.
+        // 2. Run configured scanners on the filtered files, limiting results to diff hunks.
         let mut issues = Vec::new();
         for file in filtered_files {
             let content = fs::read_to_string(&file.path)?;
+            let mut changed_lines = std::collections::HashSet::new();
+            for hunk in &file.hunks {
+                let mut new_line = hunk.new_start as usize;
+                for line in &hunk.lines {
+                    match line {
+                        diff_parser::Line::Added(_) => {
+                            changed_lines.insert(new_line);
+                            new_line += 1;
+                        }
+                        diff_parser::Line::Context(_) => {
+                            new_line += 1;
+                        }
+                        diff_parser::Line::Removed(_) => {}
+                    }
+                }
+            }
+
             for scanner in &self.scanners {
                 let mut found = scanner.scan(&file.path, &content, &self.config)?;
+                found.retain(|issue| changed_lines.contains(&issue.line_number));
                 issues.append(&mut found);
             }
         }
