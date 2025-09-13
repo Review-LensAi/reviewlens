@@ -1,7 +1,9 @@
 //! The command-line interface for the Intelligent Code Review Agent.
 
+use anyhow::Context;
 use clap::Parser;
 use engine::ReviewEngine;
+use std::path::PathBuf;
 
 mod commands;
 
@@ -10,12 +12,16 @@ mod commands;
 #[command(version, about, long_about = None)]
 #[command(propagate_version = true)]
 struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-
     /// Sets the verbosity level.
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
+
+    /// Path to configuration file.
+    #[arg(long, value_name = "PATH", default_value = "reviewer.toml")]
+    config: PathBuf,
+
+    #[command(subcommand)]
+    command: Commands,
 }
 
 /// The subcommands for the CLI.

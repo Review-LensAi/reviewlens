@@ -21,6 +21,11 @@ pub mod scanner;
 use crate::config::Config;
 use crate::error::Result;
 use crate::llm::{create_llm_provider, LlmProvider};
+use crate::llm::{LlmProvider, LocalOnlyProvider};
+use crate::rag::RagContextRetriever;
+use crate::report::{MarkdownGenerator, ReportGenerator, ReviewReport};
+use crate::scanner::{Scanner, TodoScanner};
+use std::fs;
 
 /// The main engine struct.
 pub struct ReviewEngine {
@@ -36,17 +41,50 @@ impl ReviewEngine {
     }
 
     /// Runs a complete code review analysis on a given diff.
-    pub async fn run(&self, diff: &str) -> Result<()> {
+    pub async fn run(&self, diff: &str) -> Result<String> {
         println!("Engine running with config: {:?}", self.config);
         println!("Analyzing diff: {}", diff);
-        // Example usage of the configured LLM provider.
-        let response = self.llm.generate("Summarize the diff").await?;
-        println!("LLM response: {}", response.content);
-        // 1. Parse the diff.
-        // 2. Use scanner to find hard-coded issues.
-        // 3. Use RAG to fetch relevant context from the codebase.
-        // 4. Use LLM to generate insights and suggestions.
-        // 5. Generate a report.
-        todo!("Implement the main review logic");
+
+        // 1. Parse the diff to identify changed files and hunks.
+        let changed_files = diff_parser::parse(diff)?;
+
+        // 2. Run configured scanners on the changed files.
+        let mut issues = Vec::new();
+        let scanners: Vec<Box<dyn Scanner>> = vec![Box::new(TodoScanner)];
+        for file in changed_files {
+            let content = fs::read_to_string(&file.path)?;
+            for scanner in &scanners {
+                let mut found = scanner.scan(&file.path, &content)?;
+                issues.append(&mut found);
+            }
+        }
+
+        // 3. Retrieve RAG context for flagged regions.
+        let rag = RagContextRetriever {};
+        for issue in &issues {
+            let _ = rag
+                .retrieve(&format!("{}:{} {}", issue.file_path, issue.line_number, issue.description))
+                .await?;
+        }
+
+        // 4. Call the selected LLM provider for suggestions.
+        let provider: Box<dyn LlmProvider> = match self.config.llm.provider.as_str() {
+            _ => Box::new(LocalOnlyProvider),
+        };
+        let prompt = format!(
+            "Provide a review summary for the following issues: {:?}",
+            issues
+        );
+        let llm_response = provider.generate(&prompt).await?;
+
+        // 5. Build the ReviewReport and return a formatted string.
+        let report = ReviewReport {
+            summary: llm_response.content,
+            issues,
+        };
+        let generator = MarkdownGenerator;
+        let output = generator.generate(&report)?;
+
+        Ok(output)
     }
 }
