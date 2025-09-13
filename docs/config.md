@@ -38,7 +38,7 @@ Optional sections let you cap token usage or adjust generation parameters:
 # max-per-run = 100000
 
 [generation]
-temperature = 0.2
+temperature = 0.0
 ```
 
 ## Using in CI

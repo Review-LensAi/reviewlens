@@ -44,7 +44,7 @@ provider = "null"
 # --- Generation Settings ---
 [generation]
 # Controls generation behaviour such as temperature.
-temperature = 0
+temperature = 0.0  # default for deterministic output
 
 
 # --- Privacy Settings ---
