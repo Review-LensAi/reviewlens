@@ -1,4 +1,4 @@
-use engine::config::Config;
+use engine::config::{Config, IndexConfig};
 use engine::scanner::{ConventionDeviationScanner, Scanner};
 use regex::Regex;
 use serde_json::json;
@@ -59,7 +59,9 @@ fn build_index(docs: &[(&str, &str)]) -> NamedTempFile {
 fn detects_println_usage() {
     let index = build_index(&[("existing.rs", "fn existing() { log::info!(\"hi\"); }")]);
     let mut config = Config::default();
-    config.index_path = Some(index.path().to_str().unwrap().to_string());
+    config.index = Some(IndexConfig {
+        path: index.path().to_str().unwrap().to_string(),
+    });
     let scanner = ConventionDeviationScanner;
     let content = "fn new() { println!(\"hi\"); }";
     let issues = scanner
@@ -73,7 +75,9 @@ fn detects_println_usage() {
 fn detects_unwrap_usage() {
     let index = build_index(&[("existing.rs", "fn existing() -> Result<(), anyhow::Error> { Ok(()) }")]);
     let mut config = Config::default();
-    config.index_path = Some(index.path().to_str().unwrap().to_string());
+    config.index = Some(IndexConfig {
+        path: index.path().to_str().unwrap().to_string(),
+    });
     let scanner = ConventionDeviationScanner;
     let content = "fn new() { let x = option.unwrap(); }";
     let issues = scanner
@@ -87,7 +91,9 @@ fn detects_unwrap_usage() {
 fn allows_log_usage() {
     let index = build_index(&[("existing.rs", "fn existing() { log::info!(\"hi\"); }")]);
     let mut config = Config::default();
-    config.index_path = Some(index.path().to_str().unwrap().to_string());
+    config.index = Some(IndexConfig {
+        path: index.path().to_str().unwrap().to_string(),
+    });
     let scanner = ConventionDeviationScanner;
     let content = "fn new() { log::warn!(\"hi\"); }";
     let issues = scanner
@@ -100,7 +106,9 @@ fn allows_log_usage() {
 fn detects_eprintln_usage() {
     let index = build_index(&[("existing.rs", "fn existing() { log::info!(\"hi\"); }")]);
     let mut config = Config::default();
-    config.index_path = Some(index.path().to_str().unwrap().to_string());
+    config.index = Some(IndexConfig {
+        path: index.path().to_str().unwrap().to_string(),
+    });
     let scanner = ConventionDeviationScanner;
     let content = "fn new() { eprintln!(\"hi\"); }";
     let issues = scanner
@@ -114,7 +122,9 @@ fn detects_eprintln_usage() {
 fn detects_expect_usage() {
     let index = build_index(&[("existing.rs", "fn existing() -> Result<(), anyhow::Error> { Ok(()) }")]);
     let mut config = Config::default();
-    config.index_path = Some(index.path().to_str().unwrap().to_string());
+    config.index = Some(IndexConfig {
+        path: index.path().to_str().unwrap().to_string(),
+    });
     let scanner = ConventionDeviationScanner;
     let content = "fn new() { let x = option.expect(\"hi\"); }";
     let issues = scanner
@@ -128,7 +138,9 @@ fn detects_expect_usage() {
 fn detects_missing_result_return() {
     let index = build_index(&[("existing.rs", "fn existing() -> Result<(), anyhow::Error> { Ok(()) }")]);
     let mut config = Config::default();
-    config.index_path = Some(index.path().to_str().unwrap().to_string());
+    config.index = Some(IndexConfig {
+        path: index.path().to_str().unwrap().to_string(),
+    });
     let scanner = ConventionDeviationScanner;
     let content = "fn new() { do_something(); }";
     let issues = scanner

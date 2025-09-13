@@ -11,6 +11,20 @@ use std::path::Path;
 /// Default path for the RAG index file.
 pub const DEFAULT_INDEX_PATH: &str = ".reviewer/index/index.json";
 
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct IndexConfig {
+    pub path: String,
+}
+
+impl Default for IndexConfig {
+    fn default() -> Self {
+        Self {
+            path: DEFAULT_INDEX_PATH.to_string(),
+        }
+    }
+}
+
 // As per PRD section 9
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -25,9 +39,12 @@ pub struct Config {
     pub privacy: PrivacyConfig,
     #[serde(default)]
     pub paths: PathsConfig,
-    /// Optional path to a pre-built vector index used for RAG.
+    /// Configuration for the pre-built vector index used for RAG.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
+    pub index: Option<IndexConfig>,
+    #[deprecated(note = "use [index] table instead")]
+    #[serde(skip_serializing, default)]
     pub index_path: Option<String>,
     #[serde(default)]
     pub rules: RulesConfig,
@@ -235,6 +252,18 @@ impl Config {
         let content = std::fs::read_to_string(path)?;
         toml::from_str(&content).map_err(|e| EngineError::Config(e.to_string()))
     }
+
+    /// Returns the configured index path, respecting the deprecated field.
+    pub fn index_path(&self) -> Option<&str> {
+        if let Some(index) = &self.index {
+            Some(index.path.as_str())
+        } else {
+            #[allow(deprecated)]
+            {
+                self.index_path.as_deref()
+            }
+        }
+    }
 }
 
 // Need a Default implementation for Config as well, so we can create one if the file is missing.
@@ -246,7 +275,9 @@ impl Default for Config {
             generation: GenerationConfig::default(),
             privacy: PrivacyConfig::default(),
             paths: PathsConfig::default(),
-            index_path: Some(DEFAULT_INDEX_PATH.to_string()),
+            index: Some(IndexConfig::default()),
+            #[allow(deprecated)]
+            index_path: None,
             rules: RulesConfig::default(),
             fail_on: default_fail_on(),
         }

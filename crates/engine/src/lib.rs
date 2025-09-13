@@ -170,7 +170,7 @@ impl ReviewEngine {
 
         // 3. Retrieve RAG context for flagged regions.
         let vector_store: Box<dyn VectorStore + Send + Sync> =
-            if let Some(path) = &self.config.index_path {
+            if let Some(path) = self.config.index_path() {
                 match InMemoryVectorStore::load_from_disk(path) {
                     Ok(store) => Box::new(store),
                     Err(e) => {
