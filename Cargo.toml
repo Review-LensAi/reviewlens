@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
     "crates/cli",
     "crates/engine",
@@ -10,8 +11,8 @@ edition = "2021"
 authors = ["AI Agent <ai-agent@example.com>"]
 description = "An intelligent, context-aware, and security-first code review agent."
 license = "MIT OR Apache-2.0"
-repository = "https://example.com/intelligent-code-reviewer"
-homepage = "https://example.com/intelligent-code-reviewer"
+repository = "https://github.com/some-org/intelligent-code-reviewer"
+homepage = "https://github.com/some-org/intelligent-code-reviewer"
 
 [workspace.dependencies]
 # --- Internal Crates ---

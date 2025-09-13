@@ -1,7 +1,6 @@
 //! The `index` subcommand.
 
 use clap::Args;
-use engine::rag::index_repository;
 use engine::ReviewEngine;
 
 #[derive(Args, Debug)]
