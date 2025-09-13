@@ -2,6 +2,7 @@
 
 use clap::Args;
 use engine::ReviewEngine;
+use engine::rag::index_repository;
 use std::fs;
 use std::path::Path;
 
