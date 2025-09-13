@@ -47,6 +47,14 @@ struct ContentBlock {
 #[derive(Deserialize)]
 struct AnthropicResponse {
     content: Vec<ContentBlock>,
+    #[serde(default)]
+    usage: Option<Usage>,
+}
+
+#[derive(Deserialize)]
+struct Usage {
+    input_tokens: u32,
+    output_tokens: u32,
 }
 
 #[async_trait]
@@ -79,6 +87,13 @@ impl LlmProvider for AnthropicProvider {
             .first()
             .map(|c| c.text.clone())
             .unwrap_or_default();
-        Ok(LlmResponse { content })
+        let tokens = res
+            .usage
+            .map(|u| u.input_tokens + u.output_tokens)
+            .unwrap_or(0);
+        Ok(LlmResponse {
+            content,
+            token_usage: tokens,
+        })
     }
 }
