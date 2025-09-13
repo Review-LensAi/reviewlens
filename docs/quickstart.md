@@ -1,0 +1,34 @@
+# Quickstart
+
+This guide helps you install and run the `reviewer-cli` locally or in CI.
+
+## Installation
+- Use the install script:
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/some-org/intelligent-code-reviewer/main/install.sh | sh
+  ```
+- Download a release binary and place it in your `PATH`.
+- Or build from source with `cargo install`.
+
+## Configuration
+1. Copy the example file:
+   ```bash
+   cp reviewer.toml.example reviewer.toml
+   ```
+2. Set your LLM provider and API key. Configuration values can also be supplied via environment variables or CLI flags.
+
+## Running a Review
+Run the agent from the root of your project:
+```bash
+reviewer-cli check --base-ref main
+```
+The report is written to `review_report.md`.
+
+## CI Setup
+The CLI can gate pull requests by exiting non‑zero when issues are found. See the sample configurations in [`docs/ci/`](ci/) for GitHub Actions and GitLab CI examples.
+
+## Privacy Defaults
+The tool is designed with privacy in mind:
+- Only files listed in `paths.allow` are analyzed.
+- Secret redaction is enabled by default (`privacy.redaction.enabled = true`).
+- The example configuration uses `provider = "null"`, so no code is sent to an external LLM unless you explicitly configure one.
