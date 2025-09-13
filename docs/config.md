@@ -41,6 +41,9 @@ Optional sections let you cap token usage or adjust generation parameters:
 temperature = 0.0
 ```
 
+## Diagrams
+When three or more changed files reference one another, the engine populates `mermaid_diagram` in the `ReviewReport` with a simple Mermaid sequence diagram. The Markdown report renders this automatically; no additional configuration is required.
+
 ## Hotspot Weights
 Rank hotspots by combining scanner findings and code churn:
 ```toml
