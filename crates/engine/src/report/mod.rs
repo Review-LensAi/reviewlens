@@ -10,6 +10,12 @@ use crate::{config::Config, scanner::Issue};
 pub struct ReviewReport {
     pub summary: String,
     pub issues: Vec<Issue>,
+    /// Notes about code quality or convention deviations.
+    pub code_quality: Vec<String>,
+    /// Paths or descriptions of files considered hotspots.
+    pub hotspots: Vec<String>,
+    /// Optional Mermaid diagram describing flows or relationships.
+    pub mermaid_diagram: Option<String>,
     pub config: Config,
 }
 
@@ -53,12 +59,41 @@ impl ReportGenerator for MarkdownGenerator {
             for issue in &sorted_issues {
                 md.push_str(&format!(
                     "| `{:?}` | {} | `{}:{}` | {} |\n",
-                    issue.severity, issue.title, issue.file_path, issue.line_number, issue.description
+                    issue.severity,
+                    issue.title,
+                    issue.file_path,
+                    issue.line_number,
+                    issue.description
                 ));
             }
         }
 
-        md.push_str("\n\n---\n\n");
+        md.push_str("\n## 🧹 Code Quality & Conventions\n\n");
+        if report.code_quality.is_empty() {
+            md.push_str("No code quality issues found.\n");
+        } else {
+            for note in &report.code_quality {
+                md.push_str(&format!("* {}\n", note));
+            }
+        }
+
+        md.push_str("\n## 🔥 Hotspots\n\n");
+        if report.hotspots.is_empty() {
+            md.push_str("No hotspots identified.\n");
+        } else {
+            for spot in &report.hotspots {
+                md.push_str(&format!("* {}\n", spot));
+            }
+        }
+
+        if let Some(diagram) = &report.mermaid_diagram {
+            md.push_str("\n## Diagram\n\n");
+            md.push_str("```mermaid\n");
+            md.push_str(diagram);
+            md.push_str("\n```\n");
+        }
+
+        md.push_str("\n---\n\n");
         md.push_str("## Appendix: Configuration Snapshot\n\n");
         md.push_str("This review was run with the following configuration:\n\n");
         md.push_str("```json\n");

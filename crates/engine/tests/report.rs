@@ -8,10 +8,15 @@ fn markdown_generator_no_issues() {
     let report = ReviewReport {
         summary: "All good".into(),
         issues: vec![],
+        code_quality: vec![],
+        hotspots: vec![],
+        mermaid_diagram: None,
         config: Config::default(),
     };
     let md = generator.generate(&report).unwrap();
     assert!(md.contains("✅ No issues found."));
+    assert!(md.contains("No code quality issues found."));
+    assert!(md.contains("No hotspots identified."));
 }
 
 #[test]
@@ -27,9 +32,16 @@ fn markdown_generator_with_issues() {
     let report = ReviewReport {
         summary: "Issues".into(),
         issues: vec![issue],
+        code_quality: vec!["Use snake_case for variables".into()],
+        hotspots: vec!["src/main.rs:10 - complex function".into()],
+        mermaid_diagram: Some("graph TD;A-->B;".into()),
         config: Config::default(),
     };
     let md = generator.generate(&report).unwrap();
     assert!(md.contains("Test issue"));
     assert!(md.contains("lib.rs:42"));
+    assert!(md.contains("Use snake_case for variables"));
+    assert!(md.contains("src/main.rs:10 - complex function"));
+    assert!(md.contains("```mermaid"));
+    assert!(md.contains("A-->B"));
 }
