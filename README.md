@@ -34,7 +34,7 @@ Our goal is to build an agent that slashes review time while improving code qual
     ```bash
     cp reviewer.toml.example reviewer.toml
     ```
-    Edit `reviewer.toml` to select your desired LLM provider, model, and project settings.
+    Edit `reviewer.toml` to select your desired LLM provider, model, paths, and rule settings.
 
 3.  **Build the CLI:**
     ```bash
