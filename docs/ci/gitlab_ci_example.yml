@@ -13,6 +13,8 @@ code_review:
     - cargo test --all
     # Build the CLI
     - cargo build --release
+    # Build an index for the repository
+    - ./target/release/reviewer-cli index --path . --output index.json
     # Run the review against the target branch of the merge request
     - ./target/release/reviewer-cli check --diff $CI_MERGE_REQUEST_TARGET_BRANCH_NAME --output review_report.md
   artifacts:
