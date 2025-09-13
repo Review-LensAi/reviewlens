@@ -49,11 +49,10 @@ pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<()> {
 
     // 3. Generate the markdown report and write it to `args.output`.
     let generator = MarkdownGenerator;
-    let report_md =
-        generator
-            .generate(&report)
-            .map_err(|e| anyhow::anyhow!(e))?;
-    fs::write(&args.output, report_md)?;
+    let report_md = generator
+        .generate(&report)
+        .map_err(|e| anyhow::anyhow!(e))?;
+    fs::write(&args.output, &report_md)?;
     println!("\nReview complete. Report written to {}.", args.output);
 
     // 4. Exit non-zero if any issues were found.

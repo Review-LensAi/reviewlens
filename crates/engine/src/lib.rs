@@ -21,9 +21,8 @@ pub mod scanner;
 use crate::config::Config;
 use crate::error::Result;
 use crate::llm::{create_llm_provider, LlmProvider};
-use crate::llm::{LlmProvider, LocalOnlyProvider};
-use crate::rag::RagContextRetriever;
-use crate::report::{MarkdownGenerator, ReportGenerator, ReviewReport};
+use crate::rag::{InMemoryVectorStore, RagContextRetriever};
+use crate::report::ReviewReport;
 use crate::scanner::{Scanner, TodoScanner};
 use std::fs;
 
@@ -43,7 +42,7 @@ impl ReviewEngine {
     }
 
     /// Runs a complete code review analysis on a given diff.
-    pub async fn run(&self, diff: &str) -> Result<String> {
+    pub async fn run(&self, diff: &str) -> Result<ReviewReport> {
         println!("Engine running with config: {:?}", self.config);
         println!("Analyzing diff: {}", diff);
 
@@ -62,7 +61,7 @@ impl ReviewEngine {
         }
 
         // 3. Retrieve RAG context for flagged regions.
-        let rag = RagContextRetriever {};
+        let rag = RagContextRetriever::new(Box::new(InMemoryVectorStore::default()));
         for issue in &issues {
             let _ = rag
                 .retrieve(&format!("{}:{} {}", issue.file_path, issue.line_number, issue.description))
@@ -70,23 +69,18 @@ impl ReviewEngine {
         }
 
         // 4. Call the selected LLM provider for suggestions.
-        let provider: Box<dyn LlmProvider> = match self.config.llm.provider.as_str() {
-            _ => Box::new(LocalOnlyProvider),
-        };
         let prompt = format!(
             "Provide a review summary for the following issues: {:?}",
             issues
         );
-        let llm_response = provider.generate(&prompt).await?;
+        let llm_response = self.llm.generate(&prompt).await?;
 
-        // 5. Build the ReviewReport and return a formatted string.
+        // 5. Build and return the ReviewReport.
         let report = ReviewReport {
             summary: llm_response.content,
             issues,
         };
-        let generator = MarkdownGenerator;
-        let output = generator.generate(&report)?;
 
-        Ok(output)
+        Ok(report)
     }
 }

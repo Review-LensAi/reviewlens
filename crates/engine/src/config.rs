@@ -7,7 +7,7 @@ use crate::error::{EngineError, Result};
 use serde::Deserialize;
 use std::path::Path;
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
     pub llm: LlmConfig,
@@ -16,7 +16,7 @@ pub struct Config {
     pub rules: RulesConfig,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum Provider {
     Openai,
@@ -25,7 +25,7 @@ pub enum Provider {
     Local,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct LlmConfig {
     pub provider: Provider,
@@ -38,7 +38,7 @@ pub struct LlmConfig {
     pub base_url: Option<String>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProjectConfig {
     /// Paths to include in the analysis. Globs are supported.
@@ -49,7 +49,7 @@ pub struct ProjectConfig {
     pub exclude: Vec<String>,
 }
 
-#[derive(Deserialize, Debug, Clone, Default)]
+#[derive(Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct RulesConfig {
     // Configuration for different scanners can go here.

@@ -70,3 +70,21 @@ impl RagContextRetriever {
         Ok(formatted)
     }
 }
+
+/// A simple in-memory vector store for demonstration purposes.
+#[derive(Default)]
+pub struct InMemoryVectorStore;
+
+#[async_trait]
+impl VectorStore for InMemoryVectorStore {
+    /// In a real implementation, this would store the document and embedding.
+    async fn add(&mut self, _document: String, _embedding: Vec<f32>) -> Result<()> {
+        Ok(())
+    }
+
+    /// In a real implementation, this would perform a similarity search.
+    /// For now, we return a dummy result to ensure the calling code works.
+    async fn search(&self, _query_embedding: Vec<f32>, _top_k: usize) -> Result<Vec<String>> {
+        Ok(vec!["Example context from in-memory store".to_string()])
+    }
+}

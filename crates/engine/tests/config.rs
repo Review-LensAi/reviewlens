@@ -1,4 +1,4 @@
-use engine::config::Config;
+use engine::config::{Config, Provider};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 
@@ -27,7 +27,7 @@ secrets = false
     let config = Config::load_from_path(&path).expect("config should load");
     fs::remove_file(&path).unwrap();
 
-    assert_eq!(config.llm.provider, "local");
+    assert_eq!(config.llm.provider, Provider::Local);
     assert_eq!(config.project.include, vec!["src/**/*".to_string()]);
     assert!(config.rules.owasp_top_5);
     assert!(!config.rules.secrets);
