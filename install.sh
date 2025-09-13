@@ -48,11 +48,14 @@ case "$OS" in
 esac
 
 case "$ARCH" in
-    x86_64)
+    x86_64|amd64)
         TARGET_ARCH="x86_64"
         ;;
+    aarch64|arm64)
+        TARGET_ARCH="aarch64"
+        ;;
     *)
-        print_error "Unsupported architecture: ${ARCH}. Only x86_64 is currently supported."
+        print_error "Unsupported architecture: ${ARCH}. Only x86_64 and aarch64 are currently supported."
         ;;
 esac
 

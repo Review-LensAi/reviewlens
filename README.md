@@ -34,6 +34,16 @@ You can download pre-compiled binaries directly from the [GitHub Releases page](
 
 Download the appropriate archive for your operating system, extract it, and place the `reviewer-cli` (or `reviewer-cli.exe`) binary in a directory included in your system's `PATH`.
 
+Each release also provides a `.sha256` checksum and a `.sig` signature file generated with [cosign](https://github.com/sigstore/cosign). After downloading an archive, you can verify its integrity and authenticity:
+
+```bash
+# Verify the checksum
+sha256sum -c reviewer-cli-<TARGET>.tar.gz.sha256
+
+# Verify the signature (requires cosign)
+cosign verify-blob --signature reviewer-cli-<TARGET>.tar.gz.sig reviewer-cli-<TARGET>.tar.gz
+```
+
 ### With `cargo` (Requires Rust)
 
 If you have the Rust toolchain installed, you can build and install `reviewer-cli` from crates.io.
