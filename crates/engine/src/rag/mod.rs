@@ -5,6 +5,8 @@
 
 use crate::error::{EngineError, Result};
 use async_trait::async_trait;
+use std::fs;
+use walkdir::WalkDir;
 
 /// A trait for a vector store that can store and retrieve embeddings.
 #[async_trait]
@@ -73,18 +75,36 @@ impl RagContextRetriever {
 
 /// A simple in-memory vector store for demonstration purposes.
 #[derive(Default)]
-pub struct InMemoryVectorStore;
+pub struct InMemoryVectorStore {
+    documents: Vec<String>,
+}
 
 #[async_trait]
 impl VectorStore for InMemoryVectorStore {
-    /// In a real implementation, this would store the document and embedding.
-    async fn add(&mut self, _document: String, _embedding: Vec<f32>) -> Result<()> {
+    /// Stores the document in memory. Embeddings are ignored in this simple example.
+    async fn add(&mut self, document: String, _embedding: Vec<f32>) -> Result<()> {
+        self.documents.push(document);
         Ok(())
     }
 
-    /// In a real implementation, this would perform a similarity search.
-    /// For now, we return a dummy result to ensure the calling code works.
-    async fn search(&self, _query_embedding: Vec<f32>, _top_k: usize) -> Result<Vec<String>> {
-        Ok(vec!["Example context from in-memory store".to_string()])
+    /// Returns up to `top_k` documents from the in-memory store.
+    async fn search(&self, _query_embedding: Vec<f32>, top_k: usize) -> Result<Vec<String>> {
+        Ok(self.documents.iter().take(top_k).cloned().collect())
     }
+}
+
+/// Indexes all files under `path` and populates an `InMemoryVectorStore`.
+pub async fn index_repository(path: &str, force: bool) -> Result<InMemoryVectorStore> {
+    println!("Indexing repository at {} (force={})", path, force);
+    let mut store = InMemoryVectorStore::default();
+
+    for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
+        if entry.file_type().is_file() {
+            let content = fs::read_to_string(entry.path())?;
+            let embedding: Vec<f32> = content.bytes().map(|b| b as f32).collect();
+            store.add(content, embedding).await?;
+        }
+    }
+
+    Ok(store)
 }

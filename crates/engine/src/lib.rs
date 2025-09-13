@@ -104,6 +104,29 @@ impl ReviewEngine {
         let rag = RagContextRetriever::new(Box::new(InMemoryVectorStore::default()));
         let mut contexts = Vec::new();
         for issue in &issues {
+            if let Ok(ctx) = rag
+                .retrieve(&format!(
+                    "{}:{} {}",
+                    issue.file_path, issue.line_number, issue.description
+                ))
+                .await
+            {
+                contexts.push(ctx);
+            }
+        }
+
+        // 4. Call the selected LLM provider for suggestions.
+        let mut prompt = String::new();
+        if !contexts.is_empty() {
+            prompt.push_str("Context:\n");
+            prompt.push_str(&contexts.join("\n\n"));
+            prompt.push_str("\n\n");
+        }
+        prompt.push_str(&format!(
+            "Provide a review summary for the following issues: {:?}",
+            issues
+        ));
+      
             let context = rag
                 .retrieve(&format!("{}:{} {}", issue.file_path, issue.line_number, issue.description))
                 .await?;
@@ -130,6 +153,7 @@ impl ReviewEngine {
             redacted_issues.join("\n"),
             redacted_contexts.join("\n")
         );
+
         let llm_response = self.llm.generate(&prompt).await?;
 
         // 5. Build and return the ReviewReport.
