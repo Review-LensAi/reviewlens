@@ -145,13 +145,17 @@ fn register_builtin_scanners() {
         register_scanner("convention-deviation", || {
             Box::new(ConventionDeviationScanner)
         });
-        register_scanner("server-xss-go", || Box::new(ServerXssGoScanner));
     });
 }
 
 /// Returns all scanners enabled via configuration.
 pub fn load_enabled_scanners(config: &Config) -> Vec<Box<dyn Scanner>> {
     register_builtin_scanners();
+
+    if config.rules.server_xss_go.enabled {
+        register_scanner("server-xss-go", || Box::new(ServerXssGoScanner));
+    }
+
     let registry = REGISTRY.lock().unwrap();
     let mut scanners: Vec<Box<dyn Scanner>> = Vec::new();
 
