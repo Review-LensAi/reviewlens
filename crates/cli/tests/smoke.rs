@@ -134,6 +134,7 @@ fn check_command_reports_issues_and_exit_code() {
     fs::write(repo.join("file.txt"), "api_key = \"ABCDEFGHIJKLMNOP\"\n").unwrap();
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
+  
     cmd.args(["check", "--path", repo_str, "--diff", "HEAD"]);
 
     cmd.assert().code(1);
@@ -279,8 +280,7 @@ fn check_command_redacts_secrets_in_report() {
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
-        "--config", config_str, "check", "--path", repo_str, "--diff", "HEAD", "--output",
-        output_str,
+        "--config", config_str, "check", "--path", repo_str, "--diff", "HEAD", "--output", output_str,
     ]);
 
     let output = cmd.output().expect("failed to execute command");

@@ -5,7 +5,7 @@ use regex::Regex;
 
 use crate::config::Config;
 use crate::error::Result;
-use crate::scanner::{Issue, Scanner};
+use crate::scanner::{find_ignore, parse_ignore_directives, Issue, Scanner};
 
 pub struct SecretsScanner;
 
@@ -31,21 +31,35 @@ impl Scanner for SecretsScanner {
 
     fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
+        let ignores = parse_ignore_directives(content);
         for (i, line) in content.lines().enumerate() {
             for regex in &*SECRET_REGEXES {
                 if regex.is_match(line) {
-                    issues.push(Issue {
-                        title: "Potential Secret Found".to_string(),
-                        description: format!(
-                            "A line matching the pattern for a secret was found: `{}`. Please verify and rotate if necessary.",
-                            regex.as_str()
-                        ),
-                        file_path: file_path.to_string(),
-                        line_number: i + 1,
-                        severity: config.rules.secrets.severity.clone(),
-                        suggested_fix: Some("Remove secrets from source control and use secure storage or environment variables.".to_string()),
-                        diff: Some(format!("-{}\n+<redacted>", line.trim())),
-                    });
+                    if let Some(ignore) = find_ignore(&ignores, i + 1, "secrets") {
+                        log::info!(
+                            "Suppressed secrets at {}:{}{}",
+                            file_path,
+                            i + 1,
+                            ignore
+                                .reason
+                                .as_ref()
+                                .map(|r| format!(" - {}", r))
+                                .unwrap_or_default()
+                        );
+                    } else {
+                        issues.push(Issue {
+                            title: "Potential Secret Found".to_string(),
+                            description: format!(
+                                "A line matching the pattern for a secret was found: `{}`. Please verify and rotate if necessary.",
+                                regex.as_str()
+                            ),
+                            file_path: file_path.to_string(),
+                            line_number: i + 1,
+                            severity: config.rules.secrets.severity.clone(),
+                            suggested_fix: Some("Remove secrets from source control and use secure storage or environment variables.".to_string()),
+                            diff: Some(format!("-{}\n+<redacted>", line.trim())),
+                        });
+                    }
                     // Don't flag the same line multiple times
                     break;
                 }
