@@ -28,6 +28,6 @@ class ReviewLens < Formula
   end
 
   test do
-    system "\#{bin}/reviewlens", "--help"
+    assert_match version.to_s, shell_output("\#{bin}/reviewlens --version")
   end
 end
