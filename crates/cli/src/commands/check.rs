@@ -9,8 +9,10 @@ use engine::ReviewEngine;
 use std::env;
 use std::fs;
 use std::process::Command;
+use std::time::Duration;
 
 use anyhow::Context;
+use indicatif::{ProgressBar, ProgressStyle};
 
 #[derive(Clone, ValueEnum, Debug)]
 pub enum ReportFormat {
@@ -53,6 +55,14 @@ pub struct CheckArgs {
     /// Defaults to the `fail-on` setting in `reviewlens.toml` (`high` if unset).
     #[arg(long, value_enum)]
     pub fail_on: Option<Severity>,
+
+    /// Suppress the progress bar output.
+    #[arg(long, default_value_t = false)]
+    pub no_progress: bool,
+
+    /// Emit condensed output suitable for CI environments.
+    #[arg(long, default_value_t = false)]
+    pub ci: bool,
 }
 
 /// Executes the `check` subcommand.
@@ -163,10 +173,23 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
 
     // 2. Call the engine to run the review and capture its report.
     // Ensure file reads are relative to the provided path.
+    let progress = if !args.no_progress && !args.ci {
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(ProgressStyle::with_template("{spinner} {msg}").expect("spinner template"));
+        pb.enable_steady_tick(Duration::from_millis(100));
+        pb.set_message("Reviewing diff...");
+        Some(pb)
+    } else {
+        None
+    };
+
     let report = {
         let original_dir = env::current_dir().with_context(|| "failed to get current directory")?;
         env::set_current_dir(&args.path)
             .with_context(|| format!("failed to change to directory {}", args.path))?;
+        if let Some(pb) = &progress {
+            pb.set_message("Running review engine...");
+        }
         let result = engine
             .run(&diff_content)
             .await
@@ -176,14 +199,22 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
         result?
     };
 
+    if let Some(pb) = progress {
+        pb.finish_and_clear();
+    }
+
     // Print the summary and hotspots to stdout for quick visibility.
-    println!("Summary: {}", report.summary);
-    if report.hotspots.is_empty() {
-        println!("No hotspots identified.");
+    if args.ci {
+        println!("{}", report.summary);
     } else {
-        println!("Top hotspots:");
-        for spot in &report.hotspots {
-            println!("- {}", spot);
+        println!("Summary: {}", report.summary);
+        if report.hotspots.is_empty() {
+            println!("No hotspots identified.");
+        } else {
+            println!("Top hotspots:");
+            for spot in &report.hotspots {
+                println!("- {}", spot);
+            }
         }
     }
 
