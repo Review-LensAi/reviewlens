@@ -30,7 +30,7 @@ Build the RAG cache for your project before running the agent:
 ```bash
 reviewlens index --path .
 ```
-This writes `.reviewlens/index/index.json`. Use `--force` to refresh the cache after major file changes.
+This writes `.reviewlens/index/index.json.zst`. Use `--force` to refresh the cache after major file changes.
 
 Then run the agent from the root of your project:
 ```bash

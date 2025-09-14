@@ -20,7 +20,7 @@ Override the location of the pre-built vector index:
 
 ```toml
 [index]
-path = ".reviewlens/index/index.json"
+path = ".reviewlens/index/index.json.zst"
 ```
 
 The older top-level `index-path` setting is deprecated.

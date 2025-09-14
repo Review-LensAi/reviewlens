@@ -228,11 +228,13 @@ impl VectorStore for InMemoryVectorStore {
 }
 
 impl InMemoryVectorStore {
-    /// Saves the vector store to the given path in JSON format.
+    /// Saves the vector store to the given path in zstd-compressed JSON format.
     pub fn save_to_disk<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let data = serde_json::to_vec(&self)
             .map_err(|e| EngineError::Rag(format!("Failed to serialize store: {e}")))?;
-        fs::write(path, data)?;
+        let compressed =
+            zstd::encode_all(&data[..], 0).map_err(|e| EngineError::Rag(format!("Failed to compress store: {e}")))?;
+        fs::write(path, compressed)?;
         Ok(())
     }
 
@@ -240,7 +242,9 @@ impl InMemoryVectorStore {
     /// exist or cannot be deserialized, an error is returned.
     pub fn load_from_disk<P: AsRef<Path>>(path: P) -> Result<Self> {
         let data = fs::read(path)?;
-        serde_json::from_slice(&data)
+        let decompressed = zstd::decode_all(&data[..])
+            .map_err(|e| EngineError::Rag(format!("Failed to decompress store: {e}")))?;
+        serde_json::from_slice(&decompressed)
             .map_err(|e| EngineError::Rag(format!("Failed to deserialize store: {e}")))
     }
 }

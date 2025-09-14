@@ -24,7 +24,7 @@ async fn retrieves_context_from_saved_store() {
     // Persist the store to disk
     let mut path = env::temp_dir();
     let filename = format!(
-        "vector_store_{}.json",
+        "vector_store_{}.json.zst",
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -48,7 +48,7 @@ async fn indexes_repository_and_saves_to_disk() {
     let file_path = dir.path().join("file.txt");
     fs::write(&file_path, "content").unwrap();
     let index_dir = tempdir().unwrap();
-    let index_path = index_dir.path().join("index.json");
+    let index_path = index_dir.path().join("index.json.zst");
 
     let allow = vec!["**/*".into()];
     let deny = vec![];
@@ -67,7 +67,7 @@ async fn updates_index_incrementally() {
     let file_a = dir.path().join("a.txt");
     fs::write(&file_a, "a").unwrap();
     let index_dir = tempdir().unwrap();
-    let index_path = index_dir.path().join("index.json");
+    let index_path = index_dir.path().join("index.json.zst");
 
     let allow = vec!["**/*".into()];
     let deny = vec![];
@@ -94,8 +94,10 @@ async fn updates_index_incrementally() {
         .await
         .unwrap();
     assert_eq!(refreshed.len(), 2);
-    let json = fs::read_to_string(&index_path).unwrap();
-    assert!(json.contains("a changed"));
+    let bytes = fs::read(&index_path).unwrap();
+    let json = zstd::decode_all(&bytes[..]).unwrap();
+    let text = String::from_utf8(json).unwrap();
+    assert!(text.contains("a changed"));
 
     // Forcing rebuild should produce the same result
     let rebuilt = index_repository(dir.path(), &index_path, true, &allow, &deny)
@@ -115,7 +117,7 @@ async fn respects_path_filters_and_ignores_vcs_dirs() {
     fs::write(git_dir.join("config"), "d").unwrap();
 
     let index_dir = tempdir().unwrap();
-    let index_path = index_dir.path().join("index.json");
+    let index_path = index_dir.path().join("index.json.zst");
 
     let allow = vec!["*.rs".into()];
     let deny = vec!["excluded.rs".into()];
@@ -124,9 +126,11 @@ async fn respects_path_filters_and_ignores_vcs_dirs() {
         .await
         .unwrap();
     assert_eq!(store.len(), 1);
-    let json = fs::read_to_string(&index_path).unwrap();
-    assert!(json.contains("included.rs"));
-    assert!(!json.contains("excluded.rs"));
-    assert!(!json.contains("other.txt"));
-    assert!(!json.contains(".git"));
+    let bytes = fs::read(&index_path).unwrap();
+    let json = zstd::decode_all(&bytes[..]).unwrap();
+    let text = String::from_utf8(json).unwrap();
+    assert!(text.contains("included.rs"));
+    assert!(!text.contains("excluded.rs"));
+    assert!(!text.contains("other.txt"));
+    assert!(!text.contains(".git"));
 }
