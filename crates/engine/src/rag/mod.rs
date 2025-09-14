@@ -5,6 +5,7 @@
 
 use crate::error::{EngineError, Result};
 use async_trait::async_trait;
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
@@ -14,6 +15,8 @@ use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::time::UNIX_EPOCH;
 use walkdir::WalkDir;
+
+const VCS_DIRS: [&str; 4] = [".git", ".hg", ".svn", ".bzr"];
 
 /// Represents a single indexed document along with extracted metadata.
 #[derive(Clone, Serialize, Deserialize)]
@@ -244,11 +247,21 @@ impl InMemoryVectorStore {
 
 /// Indexes all files under `path` and populates an `InMemoryVectorStore`.
 ///
+/// Files are filtered using the provided allow and deny glob patterns. Paths
+/// matching any deny pattern or not matching any allow pattern are skipped.
+/// Version control directories such as `.git` are ignored automatically.
+///
 /// If `force` is `false` and an index already exists at `output`, the existing
 /// index is loaded from disk and only files whose modification times have
 /// changed are re-processed. When a new or updated index is built, it is
 /// persisted to the given `output` path.
-pub async fn index_repository<P, Q>(path: P, output: Q, force: bool) -> Result<InMemoryVectorStore>
+pub async fn index_repository<P, Q>(
+    path: P,
+    output: Q,
+    force: bool,
+    allow: &[String],
+    deny: &[String],
+) -> Result<InMemoryVectorStore>
 where
     P: AsRef<Path>,
     Q: AsRef<Path>,
@@ -260,6 +273,9 @@ where
         path_ref.display(),
         force
     );
+
+    let allow_set = build_globset(allow)?;
+    let deny_set = build_globset(deny)?;
 
     let mut store = if !force && output_ref.exists() {
         log::info!("Loading existing index from {}", output_ref.display());
@@ -275,9 +291,24 @@ where
 
     let mut new_documents = Vec::new();
 
-    for entry in WalkDir::new(path_ref).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(path_ref)
+        .into_iter()
+        .filter_entry(|e| {
+            if e.file_type().is_dir() {
+                let name = e.file_name().to_string_lossy();
+                !VCS_DIRS.contains(&name.as_ref())
+            } else {
+                true
+            }
+        })
+        .filter_map(|e| e.ok())
+    {
         if entry.file_type().is_file() {
-            let filename = entry.path().display().to_string();
+            let rel_path = entry.path().strip_prefix(path_ref).unwrap_or(entry.path());
+            if !(allow_set.is_match(rel_path) && !deny_set.is_match(rel_path)) {
+                continue;
+            }
+            let filename = rel_path.display().to_string();
             let modified_time = fs::metadata(entry.path())?
                 .modified()?
                 .duration_since(UNIX_EPOCH)
@@ -324,4 +355,15 @@ where
     store.save_to_disk(output_ref)?;
     log::info!("Indexed {} files", store.len());
     Ok(store)
+}
+
+fn build_globset(patterns: &[String]) -> Result<GlobSet> {
+    let mut builder = GlobSetBuilder::new();
+    for pattern in patterns {
+        let glob = Glob::new(pattern).map_err(|e| EngineError::Config(e.to_string()))?;
+        builder.add(glob);
+    }
+    builder
+        .build()
+        .map_err(|e| EngineError::Config(e.to_string()))
 }

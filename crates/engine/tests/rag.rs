@@ -50,7 +50,10 @@ async fn indexes_repository_and_saves_to_disk() {
     let index_dir = tempdir().unwrap();
     let index_path = index_dir.path().join("index.json");
 
-    let store = index_repository(dir.path(), &index_path, false)
+    let allow = vec!["**/*".into()];
+    let deny = vec![];
+
+    let store = index_repository(dir.path(), &index_path, false, &allow, &deny)
         .await
         .unwrap();
 
@@ -66,8 +69,11 @@ async fn updates_index_incrementally() {
     let index_dir = tempdir().unwrap();
     let index_path = index_dir.path().join("index.json");
 
+    let allow = vec!["**/*".into()];
+    let deny = vec![];
+
     // Initial indexing creates the cache
-    let initial = index_repository(dir.path(), &index_path, false)
+    let initial = index_repository(dir.path(), &index_path, false, &allow, &deny)
         .await
         .unwrap();
     assert_eq!(initial.len(), 1);
@@ -77,14 +83,14 @@ async fn updates_index_incrementally() {
     fs::write(&file_b, "b").unwrap();
 
     // Re-index without force should pick up the new file
-    let updated = index_repository(dir.path(), &index_path, false)
+    let updated = index_repository(dir.path(), &index_path, false, &allow, &deny)
         .await
         .unwrap();
     assert_eq!(updated.len(), 2);
 
     // Modify an existing file and ensure the content is refreshed
     fs::write(&file_a, "a changed").unwrap();
-    let refreshed = index_repository(dir.path(), &index_path, false)
+    let refreshed = index_repository(dir.path(), &index_path, false, &allow, &deny)
         .await
         .unwrap();
     assert_eq!(refreshed.len(), 2);
@@ -92,8 +98,35 @@ async fn updates_index_incrementally() {
     assert!(json.contains("a changed"));
 
     // Forcing rebuild should produce the same result
-    let rebuilt = index_repository(dir.path(), &index_path, true)
+    let rebuilt = index_repository(dir.path(), &index_path, true, &allow, &deny)
         .await
         .unwrap();
     assert_eq!(rebuilt.len(), 2);
+}
+
+#[tokio::test]
+async fn respects_path_filters_and_ignores_vcs_dirs() {
+    let dir = tempdir().unwrap();
+    fs::write(dir.path().join("included.rs"), "a").unwrap();
+    fs::write(dir.path().join("excluded.rs"), "b").unwrap();
+    fs::write(dir.path().join("other.txt"), "c").unwrap();
+    let git_dir = dir.path().join(".git");
+    std::fs::create_dir(&git_dir).unwrap();
+    fs::write(git_dir.join("config"), "d").unwrap();
+
+    let index_dir = tempdir().unwrap();
+    let index_path = index_dir.path().join("index.json");
+
+    let allow = vec!["*.rs".into()];
+    let deny = vec!["excluded.rs".into()];
+
+    let store = index_repository(dir.path(), &index_path, false, &allow, &deny)
+        .await
+        .unwrap();
+    assert_eq!(store.len(), 1);
+    let json = fs::read_to_string(&index_path).unwrap();
+    assert!(json.contains("included.rs"));
+    assert!(!json.contains("excluded.rs"));
+    assert!(!json.contains("other.txt"));
+    assert!(!json.contains(".git"));
 }
