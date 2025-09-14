@@ -21,6 +21,8 @@ for i in "${!fixtures[@]}"; do
     --path "$dir" --output "$dir/index.json" >/dev/null 2>&1
 
   git -C "$dir" init -q
+  git -C "$dir" config user.name "reviewlens"
+  git -C "$dir" config user.email "ci@reviewlens.local"
   git -C "$dir" commit -qm init --allow-empty
   git -C "$dir" add .
   git -C "$dir" reset index.json reviewlens.toml 2>/dev/null || true
