@@ -10,12 +10,10 @@ use crate::{
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Serialize;
-use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::{Mutex, Once};
 
 /// Represents an issue found by a scanner.
-#[derive(Debug, Clone, Serialize)]
 #[derive(Debug, Clone, Serialize)]
 pub struct Issue {
     pub title: String,
@@ -100,32 +98,9 @@ impl Scanner for SqlInjectionGoScanner {
     fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
         let ignores = parse_ignore_directives(content);
-        let ignores = parse_ignore_directives(content);
         for (i, line) in content.lines().enumerate() {
             for regex in &*SQL_INJECTION_PATTERNS {
                 if regex.is_match(line) {
-                    if let Some(ignore) = find_ignore(&ignores, i + 1, "sql-injection-go") {
-                        log::info!(
-                            "Suppressed sql-injection-go at {}:{}{}",
-                            file_path,
-                            i + 1,
-                            ignore
-                                .reason
-                                .as_ref()
-                                .map(|r| format!(" - {}", r))
-                                .unwrap_or_default()
-                        );
-                    } else {
-                        issues.push(Issue {
-                            title: "Potential SQL Injection".to_string(),
-                            description: "Dynamic SQL query construction detected. Use parameterized queries instead.".to_string(),
-                            file_path: file_path.to_string(),
-                            line_number: i + 1,
-                            severity: config.rules.sql_injection_go.severity.clone(),
-                            suggested_fix: Some("Use parameterized queries instead of string concatenation.".to_string()),
-                            diff: Some(format!("-{}\n+db.Query(\"...\", params)", line.trim())),
-                        });
-                    }
                     if let Some(ignore) = find_ignore(&ignores, i + 1, "sql-injection-go") {
                         log::info!(
                             "Suppressed sql-injection-go at {}:{}{}",
@@ -170,44 +145,11 @@ impl Scanner for HttpTimeoutsGoScanner {
     fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
         let ignores = parse_ignore_directives(content);
-        let ignores = parse_ignore_directives(content);
         for (i, line) in content.lines().enumerate() {
             let uses_default_client = HTTP_DEFAULT_CLIENT_REGEX.is_match(line);
             let client_without_timeout =
                 HTTP_CLIENT_REGEX.is_match(line) && !line.contains("Timeout:");
             if uses_default_client || client_without_timeout {
-                if let Some(ignore) = find_ignore(&ignores, i + 1, "http-timeouts-go") {
-                    log::info!(
-                        "Suppressed http-timeouts-go at {}:{}{}",
-                        file_path,
-                        i + 1,
-                        ignore
-                            .reason
-                            .as_ref()
-                            .map(|r| format!(" - {}", r))
-                            .unwrap_or_default()
-                    );
-                } else {
-                    issues.push(Issue {
-                        title: "HTTP Request Without Timeout".to_string(),
-                        description:
-                            "HTTP requests should set a timeout to avoid hanging indefinitely."
-                                .to_string(),
-                        file_path: file_path.to_string(),
-                        line_number: i + 1,
-                        severity: config.rules.http_timeouts_go.severity.clone(),
-                        suggested_fix: Some("Use an http.Client with a Timeout set.".to_string()),
-                        diff: Some(if uses_default_client {
-                            "-http.Get(url)\n+client := &http.Client{Timeout: 10 * time.Second}\n+client.Get(url)"
-                                .to_string()
-                        } else {
-                            format!(
-                                "-{}\n+&http.Client{{Timeout: 10 * time.Second}}",
-                                line.trim()
-                            )
-                        }),
-                    });
-                }
                 if let Some(ignore) = find_ignore(&ignores, i + 1, "http-timeouts-go") {
                     log::info!(
                         "Suppressed http-timeouts-go at {}:{}{}",
@@ -273,10 +215,6 @@ fn register_builtin_scanners() {
 /// Returns all scanners enabled via configuration.
 pub fn load_enabled_scanners(config: &Config) -> Vec<Box<dyn Scanner>> {
     register_builtin_scanners();
-
-    if config.rules.server_xss_go.enabled {
-        register_scanner("server-xss-go", || Box::new(ServerXssGoScanner));
-    }
 
     let registry = REGISTRY.lock().unwrap();
     let mut scanners: Vec<Box<dyn Scanner>> = Vec::new();
