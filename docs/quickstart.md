@@ -25,7 +25,13 @@ reviewlens print-config
 Look for the `Base ref:` line in the output to see which upstream branch will be used for diffs.
 
 ## Running a Review
-Run the agent from the root of your project:
+Build the RAG cache for your project before running the agent:
+```bash
+reviewlens index --path .
+```
+This writes `.reviewlens/index/index.json`. Use `--force` to refresh the cache after major file changes.
+
+Then run the agent from the root of your project:
 ```bash
 reviewlens check --base-ref main
 ```
