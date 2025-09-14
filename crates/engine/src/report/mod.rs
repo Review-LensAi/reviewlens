@@ -31,7 +31,7 @@ pub struct RuntimeMetadata {
 }
 
 /// Represents the final, consolidated review findings.
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct ReviewReport {
     pub summary: String,
     pub issues: Vec<Issue>,
