@@ -13,11 +13,11 @@ Thank you for considering contributing to this project! We welcome issues and pu
 ## Rust Toolchain
 
 This project pins its Rust version using `rust-toolchain.toml`. The current
-required version is Rust 1.76. Install and select this toolchain with:
+required version is Rust 1.82. Install and select this toolchain with:
 
 ```bash
-rustup toolchain install 1.76
-rustup default 1.76
+rustup toolchain install 1.82
+rustup default 1.82
 ```
 
 Using the pinned toolchain keeps builds consistent with the version enforced
