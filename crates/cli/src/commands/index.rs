@@ -4,8 +4,6 @@ use clap::Args;
 use engine::config::DEFAULT_INDEX_PATH;
 use engine::rag::index_repository;
 use engine::ReviewEngine;
-use std::fs;
-use std::path::Path;
 
 #[derive(Args, Debug)]
 pub struct IndexArgs {
@@ -23,16 +21,23 @@ pub struct IndexArgs {
 }
 
 /// Executes the `index` subcommand.
-pub async fn run(args: IndexArgs, _engine: &ReviewEngine) -> anyhow::Result<()> {
+pub async fn run(args: IndexArgs, engine: &ReviewEngine) -> anyhow::Result<()> {
     log::info!("Running 'index' with the following arguments:");
     log::info!("  Path: {}", args.path);
     log::info!("  Force: {}", args.force);
     log::info!("  Output: {}", args.output);
 
     // Build (or load) the index using the engine's repository indexer.
-    let store = index_repository(&args.path, &args.output, args.force)
-        .await
-        .map_err(|e| anyhow::anyhow!(e))?;
+    let config = engine.config();
+    let store = index_repository(
+        &args.path,
+        &args.output,
+        args.force,
+        &config.paths.allow,
+        &config.paths.deny,
+    )
+    .await
+    .map_err(|e| anyhow::anyhow!(e))?;
     log::info!(
         "Index available with {} documents at {}",
         store.len(),
