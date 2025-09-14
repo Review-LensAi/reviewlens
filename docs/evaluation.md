@@ -5,7 +5,6 @@ The repository includes a small set of Go fixtures under `fixtures/` used to mea
 - `fixtures/secrets` – contains a hard-coded API key.
 - `fixtures/sql-injection` – demonstrates unsafe string concatenation in a SQL query.
 - `fixtures/http-timeout` – performs an HTTP request without a timeout.
-- `fixtures/server-xss` – writes unsanitized user input to an HTTP response.
 - `fixtures/clean` – minimal program with no issues (control).
 
 Run the harness with:

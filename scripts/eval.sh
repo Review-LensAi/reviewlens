@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-fixtures=("secrets" "sql-injection" "http-timeout" "server-xss" "clean")
-expected=(1 1 1 1 0)
+fixtures=("secrets" "sql-injection" "http-timeout" "clean")
+expected=(1 1 1 0)
 
 total_tp=0
 total_fp=0

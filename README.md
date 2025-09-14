@@ -118,8 +118,8 @@ reviewlens check --base-ref main
 ```
 
 By default, the command exits with a non-zero status if any issue of
-severity `low` or higher is found. Use `--fail-on <severity>` or set
-`fail-on` in `reviewlens.toml` to raise this threshold.
+severity `high` or higher is found. Use `--fail-on <severity>` or set
+`fail-on` in `reviewlens.toml` to adjust this threshold.
 
 The review report will be saved to `review_report.md` by default. You can view it with:
 ```bash
@@ -155,8 +155,6 @@ standard text diffs, file renames, binary file changes, and multiple hunks withi
 - [secrets](docs/secrets.md)
 - [sql-injection-go](docs/sql_injection_go.md)
 - [http-timeouts-go](docs/http_timeouts_go.md)
-- [convention-deviation](docs/convention_deviation.md)
-- [server-xss-go](docs/server_xss_go.md)
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.

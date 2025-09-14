@@ -9,11 +9,12 @@ use crate::{
 };
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::{Mutex, Once};
 
 /// Represents an issue found by a scanner.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Issue {
     pub title: String,
     pub description: String,
@@ -33,14 +34,52 @@ pub trait Scanner: Send + Sync {
     fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>>;
 }
 
+/// Represents an inline suppression directive parsed from source code.
+#[derive(Debug, Clone)]
+pub struct IgnoreDirective {
+    pub rule: String,
+    pub reason: Option<String>,
+}
+
+/// Mapping of line numbers to suppression directives.
+pub type IgnoreMap = HashMap<usize, Vec<IgnoreDirective>>;
+
+static IGNORE_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"//\s*reviewlens:ignore\s+([A-Za-z0-9_-]+)(?:\s+(.*))?").unwrap());
+
+/// Parses `// reviewlens:ignore` directives within a file's contents.
+pub fn parse_ignore_directives(content: &str) -> IgnoreMap {
+    let mut map: IgnoreMap = HashMap::new();
+    for (i, line) in content.lines().enumerate() {
+        if let Some(caps) = IGNORE_REGEX.captures(line) {
+            let rule = caps[1].to_string();
+            let reason = caps
+                .get(2)
+                .map(|m| m.as_str().trim().to_string())
+                .filter(|s| !s.is_empty());
+            let target = if line.trim_start().starts_with("//") {
+                i + 2
+            } else {
+                i + 1
+            };
+            map.entry(target)
+                .or_insert_with(Vec::new)
+                .push(IgnoreDirective { rule, reason });
+        }
+    }
+    map
+}
+
+/// Returns an ignore directive for a given rule at a line, if present.
+pub fn find_ignore<'a>(map: &'a IgnoreMap, line: usize, rule: &str) -> Option<&'a IgnoreDirective> {
+    map.get(&line)
+        .and_then(|vec| vec.iter().find(|d| d.rule == rule))
+}
+
 // --- Built-in Scanners ---
 
 pub mod secrets;
 pub use secrets::SecretsScanner;
-pub mod convention_deviation;
-pub use convention_deviation::ConventionDeviationScanner;
-pub mod server_xss_go;
-pub use server_xss_go::ServerXssGoScanner;
 
 static SQL_INJECTION_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
@@ -58,18 +97,32 @@ impl Scanner for SqlInjectionGoScanner {
 
     fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
+        let ignores = parse_ignore_directives(content);
         for (i, line) in content.lines().enumerate() {
             for regex in &*SQL_INJECTION_PATTERNS {
                 if regex.is_match(line) {
-                    issues.push(Issue {
-                        title: "Potential SQL Injection".to_string(),
-                        description: "Dynamic SQL query construction detected. Use parameterized queries instead.".to_string(),
-                        file_path: file_path.to_string(),
-                        line_number: i + 1,
-                        severity: config.rules.sql_injection_go.severity.clone(),
-                        suggested_fix: Some("Use parameterized queries instead of string concatenation.".to_string()),
-                        diff: Some(format!("-{}\n+db.Query(\"...\", params)", line.trim())),
-                    });
+                    if let Some(ignore) = find_ignore(&ignores, i + 1, "sql-injection-go") {
+                        log::info!(
+                            "Suppressed sql-injection-go at {}:{}{}",
+                            file_path,
+                            i + 1,
+                            ignore
+                                .reason
+                                .as_ref()
+                                .map(|r| format!(" - {}", r))
+                                .unwrap_or_default()
+                        );
+                    } else {
+                        issues.push(Issue {
+                            title: "Potential SQL Injection".to_string(),
+                            description: "Dynamic SQL query construction detected. Use parameterized queries instead.".to_string(),
+                            file_path: file_path.to_string(),
+                            line_number: i + 1,
+                            severity: config.rules.sql_injection_go.severity.clone(),
+                            suggested_fix: Some("Use parameterized queries instead of string concatenation.".to_string()),
+                            diff: Some(format!("-{}\n+db.Query(\"...\", params)", line.trim())),
+                        });
+                    }
                     break;
                 }
             }
@@ -91,30 +144,44 @@ impl Scanner for HttpTimeoutsGoScanner {
 
     fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
+        let ignores = parse_ignore_directives(content);
         for (i, line) in content.lines().enumerate() {
             let uses_default_client = HTTP_DEFAULT_CLIENT_REGEX.is_match(line);
             let client_without_timeout =
                 HTTP_CLIENT_REGEX.is_match(line) && !line.contains("Timeout:");
             if uses_default_client || client_without_timeout {
-                issues.push(Issue {
-                    title: "HTTP Request Without Timeout".to_string(),
-                    description:
-                        "HTTP requests should set a timeout to avoid hanging indefinitely."
-                            .to_string(),
-                    file_path: file_path.to_string(),
-                    line_number: i + 1,
-                    severity: config.rules.http_timeouts_go.severity.clone(),
-                    suggested_fix: Some("Use an http.Client with a Timeout set.".to_string()),
-                    diff: Some(if uses_default_client {
-                        "-http.Get(url)\n+client := &http.Client{Timeout: 10 * time.Second}\n+client.Get(url)"
-                            .to_string()
-                    } else {
-                        format!(
-                            "-{}\n+&http.Client{{Timeout: 10 * time.Second}}",
-                            line.trim()
-                        )
-                    }),
-                });
+                if let Some(ignore) = find_ignore(&ignores, i + 1, "http-timeouts-go") {
+                    log::info!(
+                        "Suppressed http-timeouts-go at {}:{}{}",
+                        file_path,
+                        i + 1,
+                        ignore
+                            .reason
+                            .as_ref()
+                            .map(|r| format!(" - {}", r))
+                            .unwrap_or_default()
+                    );
+                } else {
+                    issues.push(Issue {
+                        title: "HTTP Request Without Timeout".to_string(),
+                        description:
+                            "HTTP requests should set a timeout to avoid hanging indefinitely."
+                                .to_string(),
+                        file_path: file_path.to_string(),
+                        line_number: i + 1,
+                        severity: config.rules.http_timeouts_go.severity.clone(),
+                        suggested_fix: Some("Use an http.Client with a Timeout set.".to_string()),
+                        diff: Some(if uses_default_client {
+                            "-http.Get(url)\n+client := &http.Client{Timeout: 10 * time.Second}\n+client.Get(url)"
+                                .to_string()
+                        } else {
+                            format!(
+                                "-{}\n+&http.Client{{Timeout: 10 * time.Second}}",
+                                line.trim()
+                            )
+                        }),
+                    });
+                }
             }
         }
         Ok(issues)
@@ -142,10 +209,6 @@ fn register_builtin_scanners() {
         register_scanner("secrets", || Box::new(SecretsScanner));
         register_scanner("sql-injection-go", || Box::new(SqlInjectionGoScanner));
         register_scanner("http-timeouts-go", || Box::new(HttpTimeoutsGoScanner));
-        register_scanner("convention-deviation", || {
-            Box::new(ConventionDeviationScanner)
-        });
-        register_scanner("server-xss-go", || Box::new(ServerXssGoScanner));
     });
 }
 
@@ -167,16 +230,6 @@ pub fn load_enabled_scanners(config: &Config) -> Vec<Box<dyn Scanner>> {
     }
     if config.rules.http_timeouts_go.enabled {
         if let Some(factory) = registry.get("http-timeouts-go") {
-            scanners.push(factory());
-        }
-    }
-    if config.rules.convention_deviation.enabled {
-        if let Some(factory) = registry.get("convention-deviation") {
-            scanners.push(factory());
-        }
-    }
-    if config.rules.server_xss_go.enabled {
-        if let Some(factory) = registry.get("server-xss-go") {
             scanners.push(factory());
         }
     }

@@ -46,3 +46,14 @@ MIIEowIBAAKCAQEAu...
     let issue = &issues[0];
     assert_eq!(issue.line_number, 2);
 }
+
+#[test]
+fn secrets_scanner_respects_ignore_directive() {
+    let scanner = SecretsScanner;
+    let content = "const API_KEY = \"sk_live_1234567890abcdef1234567890abcdef\"; // reviewlens:ignore secrets test";
+    let config = Config::default();
+    let issues = scanner
+        .scan("config.js", content, &config)
+        .expect("scan should work");
+    assert!(issues.is_empty());
+}
