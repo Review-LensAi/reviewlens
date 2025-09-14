@@ -14,3 +14,14 @@ enabled = true
 severity = "medium"
 ```
 
+## Suppression
+
+Use the following directive to ignore a specific finding:
+
+```text
+// reviewlens:ignore sql-injection-go [reason]
+```
+
+Add the comment on the offending line or the line above it. The optional reason
+will be logged when the finding is suppressed.
+
