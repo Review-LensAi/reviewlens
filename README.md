@@ -155,8 +155,6 @@ standard text diffs, file renames, binary file changes, and multiple hunks withi
 - [secrets](docs/secrets.md)
 - [sql-injection-go](docs/sql_injection_go.md)
 - [http-timeouts-go](docs/http_timeouts_go.md)
-- [convention-deviation](docs/convention_deviation.md)
-- [server-xss-go](docs/server_xss_go.md)
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.

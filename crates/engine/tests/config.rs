@@ -58,5 +58,5 @@ fn default_config_is_sane() {
         ]
     );
     assert!(config.rules.secrets.enabled);
-    assert_eq!(config.rules.secrets.severity, Severity::Medium);
+    assert_eq!(config.rules.secrets.severity, Severity::High);
 }

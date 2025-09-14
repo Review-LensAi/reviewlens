@@ -53,21 +53,13 @@ patterns = []
 # --- Rule and Scanner Configuration ---
 [rules.secrets]
 enabled = true
-severity = "medium"
+severity = "high"
 
 [rules.sql-injection-go]
 enabled = true
-severity = "medium"
+severity = "critical"
 
 [rules.http-timeouts-go]
-enabled = true
-severity = "medium"
-
-[rules.convention-deviation]
-enabled = true
-severity = "medium"
-
-[rules.server-xss-go]
 enabled = true
 severity = "medium"
 

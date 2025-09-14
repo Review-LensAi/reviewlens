@@ -37,10 +37,6 @@ pub trait Scanner: Send + Sync {
 
 pub mod secrets;
 pub use secrets::SecretsScanner;
-pub mod convention_deviation;
-pub use convention_deviation::ConventionDeviationScanner;
-pub mod server_xss_go;
-pub use server_xss_go::ServerXssGoScanner;
 
 static SQL_INJECTION_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
@@ -142,10 +138,6 @@ fn register_builtin_scanners() {
         register_scanner("secrets", || Box::new(SecretsScanner));
         register_scanner("sql-injection-go", || Box::new(SqlInjectionGoScanner));
         register_scanner("http-timeouts-go", || Box::new(HttpTimeoutsGoScanner));
-        register_scanner("convention-deviation", || {
-            Box::new(ConventionDeviationScanner)
-        });
-        register_scanner("server-xss-go", || Box::new(ServerXssGoScanner));
     });
 }
 
@@ -167,16 +159,6 @@ pub fn load_enabled_scanners(config: &Config) -> Vec<Box<dyn Scanner>> {
     }
     if config.rules.http_timeouts_go.enabled {
         if let Some(factory) = registry.get("http-timeouts-go") {
-            scanners.push(factory());
-        }
-    }
-    if config.rules.convention_deviation.enabled {
-        if let Some(factory) = registry.get("convention-deviation") {
-            scanners.push(factory());
-        }
-    }
-    if config.rules.server_xss_go.enabled {
-        if let Some(factory) = registry.get("server-xss-go") {
             scanners.push(factory());
         }
     }

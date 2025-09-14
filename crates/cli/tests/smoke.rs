@@ -32,7 +32,7 @@ fn print_config_command_produces_valid_json() {
 
     assert_eq!(json["llm"]["provider"], "null");
     assert_eq!(json["privacy"]["redaction"]["enabled"], true);
-    assert_eq!(json["rules"]["secrets"]["severity"], "medium");
+    assert_eq!(json["rules"]["secrets"]["severity"], "high");
 }
 
 #[test]
@@ -179,8 +179,8 @@ fn check_command_respects_fail_on_from_config() {
     // Modify file to introduce a secret
     fs::write(repo.join("file.txt"), "api_key = \"ABCDEFGHIJKLMNOP\"\n").unwrap();
 
-    // Configure high fail-on threshold
-    fs::write(repo.join("reviewlens.toml"), "fail-on = \"high\"\n").unwrap();
+    // Configure critical fail-on threshold
+    fs::write(repo.join("reviewlens.toml"), "fail-on = \"critical\"\n").unwrap();
 
     let config_path = repo.join("reviewlens.toml");
     let config_str = config_path.to_str().unwrap();
