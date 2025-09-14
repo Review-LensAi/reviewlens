@@ -28,7 +28,7 @@ pub struct CheckArgs {
     pub output: String,
 
     /// Minimum issue severity that will trigger a non-zero exit.
-    /// Defaults to the `fail-on` setting in `reviewlens.toml` (`low` if unset).
+    /// Defaults to the `fail-on` setting in `reviewlens.toml` (`high` if unset).
     #[arg(long, value_enum)]
     pub fail_on: Option<Severity>,
 }

@@ -335,5 +335,5 @@ impl Default for Config {
 }
 
 fn default_fail_on() -> Severity {
-    Severity::Low
+    Severity::High
 }
