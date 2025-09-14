@@ -1,11 +1,11 @@
 # Example configuration for the Intelligent Code Review Agent.
-# Copy this file to `reviewer.toml` and customize it for your project.
+# Copy this file to `reviewlens.toml` and customize it for your project.
 
 # --- Paths Configuration ---
 # Optional configuration for a pre-built vector index used for
 # Retrieval-Augmented Generation.
 [index]
-path = ".reviewer/index/index.json"
+path = ".reviewlens/index/index.json"
 
 [paths]
 # Paths to include (allow) in the analysis. Globs are supported.

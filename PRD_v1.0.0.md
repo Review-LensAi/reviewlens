@@ -75,7 +75,7 @@ Code review has become a bottleneck. Large, AI-generated PRs overwhelm human rev
 
 ### In Scope
 
-* **CLI**: `reviewer check --path . --diff <ref>` (local & CI).
+* **CLI**: `reviewlens check --path . --diff <ref>` (local & CI).
 
   * `--diff` defaults to upstream base (auto-detected); override with `--base-ref <ref>`.
 * **Outputs**: `review_report.md` + stdout summary; CI-friendly exit codes.
@@ -104,11 +104,11 @@ Code review has become a bottleneck. Large, AI-generated PRs overwhelm human rev
 
 **A1. Install & Help**
 *As a developer, I can install the CLI and see commands.*
-**AC**: `reviewer --help` lists `check`, `index`, `print-config`, `version`.
+**AC**: `reviewlens --help` lists `check`, `index`, `print-config`, `version`.
 
 **A2. Config**
 *As a developer, I can configure models, budgets, and path filters.*
-**AC**: `reviewer.toml` supports provider selection (`null|openai|anthropic|deepseek`), model name, token/budget caps, temperature, allow/deny paths, redaction on/off. `print-config` shows **effective config** and **compiled-in providers**. Precedence: **flags > env > file**.
+**AC**: `reviewlens.toml` supports provider selection (`null|openai|anthropic|deepseek`), model name, token/budget caps, temperature, allow/deny paths, redaction on/off. `print-config` shows **effective config** and **compiled-in providers**. Precedence: **flags > env > file**.
 
 **A3. CI Integration**
 *As a maintainer, I can run the tool in CI and gate on findings.*
@@ -134,7 +134,7 @@ Code review has become a bottleneck. Large, AI-generated PRs overwhelm human rev
 ### Epic C — Context-Aware Analysis (RAG-lite)
 
 **C1. Index Main Branch**
-**AC**: Store symbols/filenames/patterns locally at `.reviewer/index/` (versioned). Incremental updates.
+**AC**: Store symbols/filenames/patterns locally at `.reviewlens/index/` (versioned). Incremental updates.
 
 **C2. Deviation Detection**
 **AC**: Flag inconsistent error handling/logging/function signatures with concrete examples from repo.
@@ -171,7 +171,7 @@ Code review has become a bottleneck. Large, AI-generated PRs overwhelm human rev
 
 ### Components
 
-* **CLI (`reviewer`)** — args parsing, config loading, orchestrates a review run.
+* **CLI (`reviewlens`)** — args parsing, config loading, orchestrates a review run.
 * **Engine (library)** — diff ingestion → rules → (optional) LLM → report.
 * **Ruleset (rules-go)** — SAST-lite checks for Go + generic patterns.
 * **RAG-lite Indexer** — local symbol/pattern index from base branch.
@@ -187,7 +187,7 @@ Code review has become a bottleneck. Large, AI-generated PRs overwhelm human rev
 5. (Optional) Summarize and propose diffs via LLM driver (with redaction).
 6. Generate `review_report.md`; print stdout summary; set exit code.
 
-**Index location**: `.reviewer/index/` (versioned). Add `.reviewer/` to `.gitignore`.
+**Index location**: `.reviewlens/index/` (versioned). Add `.reviewlens/` to `.gitignore`.
 
 ---
 
@@ -205,9 +205,9 @@ Code review has become a bottleneck. Large, AI-generated PRs overwhelm human rev
 * `privacy.redaction.enabled`: bool
 * `paths.allow` / `paths.deny`: globs
 * `rules`: per-rule enable/disable; severity thresholds
-* `index.path`: default `.reviewer/index/`
+* `index.path`: default `.reviewlens/index/`
 
-**Example: `reviewer.toml`**
+**Example: `reviewlens.toml`**
 
 ```toml
 [llm]
@@ -236,7 +236,7 @@ server_xss_go = { enabled = true, severity = "medium" }
 convention_deviation = { enabled = true, severity = "low" }
 
 [index]
-path = ".reviewer/index"
+path = ".reviewlens/index"
 ```
 
 `print-config` must display: effective values, **compiled-in driver set**, and the resolved base ref.
@@ -343,7 +343,7 @@ path = ".reviewer/index"
 **DX/Distribution**
 
 * Signed release artifacts + checksums; Homebrew tap; Docker image.
-* `reviewer --help` accurate; `print-config` shows effective config + compiled-in providers.
+* `reviewlens --help` accurate; `print-config` shows effective config + compiled-in providers.
 
 **Docs/Policy**
 
@@ -364,10 +364,10 @@ path = ".reviewer/index"
 
 ### B. Commands (CLI)
 
-* `reviewer check [--path PATH] [--diff REF] [--base-ref REF] [--fail-on {critical,high,medium,low}]`
-* `reviewer index [--path PATH]`
-* `reviewer print-config`
-* `reviewer version`
+* `reviewlens check [--path PATH] [--diff REF] [--base-ref REF] [--fail-on {critical,high,medium,low}]`
+* `reviewlens index [--path PATH]`
+* `reviewlens print-config`
+* `reviewlens version`
 
 ### C. Definitions
 
@@ -381,7 +381,7 @@ path = ".reviewer/index"
 
 ### E. Repo Hygiene
 
-* Default index path: `.reviewer/index/`; add `.reviewer/` to `.gitignore`.
+* Default index path: `.reviewlens/index/`; add `.reviewlens/` to `.gitignore`.
 
 ---
 

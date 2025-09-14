@@ -11,7 +11,7 @@ Our goal is to build an agent that slashes review time while improving code qual
 - **CLI First:** The primary interface is a powerful and scriptable command-line tool.
 - **Engine as a Library:** The core logic is a separate `engine` crate, allowing it to be used by the CLI, CI bots, IDE plugins, and other applications.
 - **Provider-Agnostic:** A clean trait-based abstraction for LLMs ensures we are not locked into any single provider. Supports OpenAI, Anthropic, DeepSeek, and local/self-hosted models.
-- **Config over Code:** Behavior is controlled through a simple `reviewer.toml` file.
+- **Config over Code:** Behavior is controlled through a simple `reviewlens.toml` file.
 - **Security & Privacy by Default:** Features path allowlists, secret redaction, and an offline "local-only" mode to ensure code privacy.
 
 ## Installation
@@ -91,21 +91,21 @@ After installing `reviewlens`, follow these steps to get started.
 
 ### 1. Configuration
 
-The agent is controlled by a `reviewer.toml` file. Copy the example file to the root of your project:
+The agent is controlled by a `reviewlens.toml` file. Copy the example file to the root of your project:
 
 ```bash
-cp reviewer.toml.example reviewer.toml
+cp reviewlens.toml.example reviewlens.toml
 ```
 
-Next, edit `reviewer.toml` to configure your desired LLM provider, model, project paths, and review rules. For any provider other than `null`, you must explicitly set both a `model` and an `api_key`.
+Next, edit `reviewlens.toml` to configure your desired LLM provider, model, project paths, and review rules. For any provider other than `null`, you must explicitly set both a `model` and an `api_key`.
 
 Configuration values are merged from multiple sources. The precedence is:
 
 1. CLI flags
-2. Environment variables (prefixed with `REVIEWER_`)
-3. Values from `reviewer.toml`
+2. Environment variables (prefixed with `REVIEWLENS_`)
+3. Values from `reviewlens.toml`
 
-For example, `--llm-provider anthropic` overrides `REVIEWER_LLM_PROVIDER`, which in turn overrides the `llm.provider` value in the configuration file.
+For example, `--llm-provider anthropic` overrides `REVIEWLENS_LLM_PROVIDER`, which in turn overrides the `llm.provider` value in the configuration file.
 
 ### 2. Usage
 
@@ -119,7 +119,7 @@ reviewlens check --base-ref main
 
 By default, the command exits with a non-zero status if any issue of
 severity `low` or higher is found. Use `--fail-on <severity>` or set
-`fail-on` in `reviewer.toml` to raise this threshold.
+`fail-on` in `reviewlens.toml` to raise this threshold.
 
 The review report will be saved to `review_report.md` by default. You can view it with:
 ```bash
@@ -143,7 +143,7 @@ The project is structured as a Cargo workspace:
 
 -   `crates/engine`: The core library containing all analysis, RAG, scanning, and reporting logic.
 -   `crates/cli`: A thin wrapper around the `engine` that provides a command-line interface.
--   `reviewer.toml`: The configuration file for defining project rules, LLM providers, and other settings.
+-   `reviewlens.toml`: The configuration file for defining project rules, LLM providers, and other settings.
 
 ## Supported Diff Formats
 
