@@ -101,7 +101,8 @@ fn check_command_respects_path_argument() {
     assert!(output.status.success());
     assert!(output_path.exists());
     let stdout = String::from_utf8(output.stdout).unwrap();
-    assert!(stdout.contains("Summary: This is a dummy response from the null provider."));
+    assert!(stdout.contains("Summary: Reviewed 1 file"));
+    assert!(stdout.contains("no issues"));
 }
 
 #[test]
