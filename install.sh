@@ -81,6 +81,29 @@ DOWNLOAD_DIR=$(mktemp -d)
 print_info "Downloading from ${DOWNLOAD_URL}..."
 curl -L -o "${DOWNLOAD_DIR}/${ASSET_NAME}" "$DOWNLOAD_URL"
 
+# Download checksum and signature files
+print_info "Fetching checksum and signature..."
+curl -L -o "${DOWNLOAD_DIR}/${ASSET_NAME}.sha256" "${DOWNLOAD_URL}.sha256"
+curl -L -o "${DOWNLOAD_DIR}/${ASSET_NAME}.sig" "${DOWNLOAD_URL}.sig"
+
+# Verify checksum
+print_info "Verifying checksum..."
+EXPECTED_SHA256=$(cut -d ' ' -f1 "${DOWNLOAD_DIR}/${ASSET_NAME}.sha256")
+if ! echo "${EXPECTED_SHA256}  ${DOWNLOAD_DIR}/${ASSET_NAME}" | sha256sum -c - >/dev/null 2>&1; then
+    print_error "Checksum verification failed"
+fi
+
+# Verify signature if cosign is available
+if command -v cosign >/dev/null 2>&1; then
+    print_info "Verifying signature with cosign..."
+    if ! cosign verify-blob --signature "${DOWNLOAD_DIR}/${ASSET_NAME}.sig" "${DOWNLOAD_DIR}/${ASSET_NAME}" >/dev/null 2>&1
+    then
+        print_error "Cosign signature verification failed"
+    fi
+else
+    print_info "cosign not found; skipping signature verification."
+fi
+
 # 4. Unpack the binary
 print_info "Unpacking the binary..."
 tar -xzf "${DOWNLOAD_DIR}/${ASSET_NAME}" -C "${DOWNLOAD_DIR}"
