@@ -3,6 +3,7 @@
 use clap::Args;
 use engine::config::Severity;
 use engine::error::EngineError;
+use engine::redact_text;
 use engine::report::{MarkdownGenerator, ReportGenerator};
 use engine::ReviewEngine;
 use std::env;
@@ -137,7 +138,8 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
     let report_md = generator
         .generate(&report)
         .map_err(|e| anyhow::anyhow!(e))?;
-    fs::write(&args.output, &report_md)?;
+    let redacted_report = redact_text(engine.config(), &report_md);
+    fs::write(&args.output, &redacted_report)?;
     log::info!("\nReview complete. Report written to {}.", args.output);
 
     // 4. Determine if issues exceed the severity threshold.
