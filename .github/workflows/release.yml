@@ -120,43 +120,20 @@ jobs:
       - name: Update Homebrew formula
         env:
           VERSION: ${{ github.ref_name }}
-          REPO: ${{ github.repository }}
         run: |
           SHA_LINUX_AMD64=$(cat release-assets/reviewlens-x86_64-unknown-linux-gnu.tar.gz.sha256)
           SHA_LINUX_ARM64=$(cat release-assets/reviewlens-aarch64-unknown-linux-gnu.tar.gz.sha256)
           SHA_MAC_AMD64=$(cat release-assets/reviewlens-x86_64-apple-darwin.tar.gz.sha256)
           SHA_MAC_ARM64=$(cat release-assets/reviewlens-aarch64-apple-darwin.tar.gz.sha256)
-          cat > homebrew-tap/reviewlens.rb <<EOF
-          class ReviewLens < Formula
-            desc "CLI for the Intelligent Code Review Agent"
-            homepage "https://github.com/${REPO}"
-            version "${VERSION#v}"
-            on_macos do
-              if Hardware::CPU.arm?
-                url "https://github.com/${REPO}/releases/download/${VERSION}/reviewlens-aarch64-apple-darwin.tar.gz"
-                sha256 "${SHA_MAC_ARM64}"
-              else
-                url "https://github.com/${REPO}/releases/download/${VERSION}/reviewlens-x86_64-apple-darwin.tar.gz"
-                sha256 "${SHA_MAC_AMD64}"
-              end
-            end
-            on_linux do
-              if Hardware::CPU.arm?
-                url "https://github.com/${REPO}/releases/download/${VERSION}/reviewlens-aarch64-unknown-linux-gnu.tar.gz"
-                sha256 "${SHA_LINUX_ARM64}"
-              else
-                url "https://github.com/${REPO}/releases/download/${VERSION}/reviewlens-x86_64-unknown-linux-gnu.tar.gz"
-                sha256 "${SHA_LINUX_AMD64}"
-              end
-            end
-            def install
-              bin.install "reviewlens"
-            end
-            test do
-              system "#{bin}/reviewlens", "--help"
-            end
-          end
-          EOF
+          sed -i "s/version \".*\"/version \"${VERSION#v}\"/" homebrew-tap/reviewlens.rb
+          sed -i "s/<X86_64_LINUX_SHA256>/${SHA_LINUX_AMD64}/" homebrew-tap/reviewlens.rb
+          sed -i "s/<ARM64_LINUX_SHA256>/${SHA_LINUX_ARM64}/" homebrew-tap/reviewlens.rb
+          sed -i "s/<X86_64_MAC_SHA256>/${SHA_MAC_AMD64}/" homebrew-tap/reviewlens.rb
+          sed -i "s/<ARM64_MAC_SHA256>/${SHA_MAC_ARM64}/" homebrew-tap/reviewlens.rb
+          if grep -E '<[A-Z0-9_]+_SHA256>' homebrew-tap/reviewlens.rb; then
+            echo "Error: placeholder SHA256 values remain" >&2
+            exit 1
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add homebrew-tap/reviewlens.rb
