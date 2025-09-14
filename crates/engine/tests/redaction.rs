@@ -5,9 +5,17 @@ use engine::redact_text;
 fn redacts_configured_patterns() {
     let mut config = Config::default();
     config.privacy.redaction.patterns.push("secret".to_string());
-    let input = "this has a secret token";
+    let input = "this has a secret value";
     let output = redact_text(&config, input);
-    assert_eq!(output, "this has a [REDACTED] token");
+    assert_eq!(output, "this has a [REDACTED] value");
+}
+
+#[test]
+fn redacts_default_patterns() {
+    let config = Config::default();
+    let input = "API-KEY aws_secret_access_key token";
+    let output = redact_text(&config, input);
+    assert_eq!(output, "[REDACTED] [REDACTED] [REDACTED]");
 }
 
 #[test]

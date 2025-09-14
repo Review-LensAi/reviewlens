@@ -38,14 +38,14 @@ Set `provider` and `api_key` to use a remote model. The default `provider = "nul
 ```toml
 [privacy.redaction]
 enabled = true
-patterns = ["aws_secret", "api_key", "token="]
+patterns = ["(?i)api[_-]?key", "aws_secret_access_key", "token"]
 ```
-Secret redaction is enabled by default and ships with patterns for AWS secrets, API keys, and token parameters.
+Secret redaction is enabled by default and ships with patterns for API keys, AWS secret access keys, and generic tokens.
 Extend the list by appending additional regular expressions:
 
 ```toml
 [privacy.redaction]
-patterns = ["aws_secret", "api_key", "token=", "passphrase"]
+patterns = ["(?i)api[_-]?key", "aws_secret_access_key", "token", "passphrase"]
 ```
 
 Override the defaults entirely with the `REVIEWLENS_PRIVACY_REDACTION_PATTERNS` environment variable or the
