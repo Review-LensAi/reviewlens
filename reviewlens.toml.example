@@ -53,7 +53,7 @@ temperature = 0.0  # default for deterministic output
 # Enable redaction of sensitive content from prompts and logs.
 enabled = true
 # Regular expression patterns to redact.
-patterns = []
+patterns = ["aws_secret", "api_key", "token="]
 
 
 # --- Report Settings ---
