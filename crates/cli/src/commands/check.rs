@@ -1,17 +1,14 @@
 //! The `check` subcommand.
 
 use clap::{Args, ValueEnum};
-use clap::{Args, ValueEnum};
 use engine::config::Severity;
 use engine::error::EngineError;
 use engine::redact_text;
-use engine::report::{JsonGenerator, MarkdownGenerator, ReportGenerator};
 use engine::report::{JsonGenerator, MarkdownGenerator, ReportGenerator};
 use engine::ReviewEngine;
 use std::env;
 use std::fs;
 use std::process::Command;
-use std::time::Duration;
 use std::time::Duration;
 
 use anyhow::Context;
@@ -54,27 +51,10 @@ pub struct CheckArgs {
     #[arg(short, long)]
     pub output: Option<String>,
 
-    /// The format of the review report.
-    #[arg(long, value_enum, default_value_t = ReportFormat::Markdown)]
-    pub format: ReportFormat,
-
     /// Minimum issue severity that will trigger a non-zero exit.
-    /// Defaults to the `fail-on` setting in `reviewlens.toml` (`high` if unset).
     /// Defaults to the `fail-on` setting in `reviewlens.toml` (`high` if unset).
     #[arg(long, value_enum)]
     pub fail_on: Option<Severity>,
-
-    // Flags such as `--no-progress` and `--ci` used to appear twice in this
-    // structure, leading to compilation errors. They are intentionally omitted
-    // here so the top-level CLI can own those options without duplication.
-
-    /// Suppress the progress bar output.
-    #[arg(long, default_value_t = false)]
-    pub no_progress: bool,
-
-    /// Emit condensed output suitable for CI environments.
-    #[arg(long, default_value_t = false)]
-    pub ci: bool,
 }
 
 /// Executes the `check` subcommand.
@@ -110,13 +90,13 @@ pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> i32 {
 
 async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool> {
     let output_path = args.output.clone().unwrap_or_else(|| match args.format {
-        ReportFormat::Markdown => "review_report.md".to_string(),
+        ReportFormat::Md => "review_report.md".to_string(),
         ReportFormat::Json => "review_report.json".to_string(),
     });
 
     log::info!("Running 'check' with the following arguments:");
     log::info!("  Path: {}", args.path);
-    log::info!("  Output: {}", args.output);
+    log::info!("  Output: {}", output_path);
     log::info!("  Format: {:?}", args.format);
     log::info!("  CI mode: {}", args.ci);
     log::info!("  Only changed: {}", args.only_changed);
@@ -187,50 +167,9 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
         }
         String::from_utf8(diff_output.stdout).context("diff output was not valid UTF-8")?
     };
-    // 1. Generate the diff.
-    let diff_content = if args.only_changed {
-        let diff_output = Command::new("git")
-            .args(["-C", &args.path, "diff", &base_ref])
-            .output()
-            .with_context(|| "failed to execute git diff")?;
-        if !diff_output.status.success() {
-            anyhow::bail!("git diff command failed");
-        }
-        String::from_utf8(diff_output.stdout).context("diff output was not valid UTF-8")?
-    } else {
-        let empty_tree = Command::new("git")
-            .args(["-C", &args.path, "hash-object", "-t", "tree", "/dev/null"])
-            .output()
-            .with_context(|| "failed to hash empty tree")?;
-        if !empty_tree.status.success() {
-            anyhow::bail!("git hash-object command failed");
-        }
-        let empty_tree_ref = String::from_utf8(empty_tree.stdout)
-            .context("empty tree hash output was not valid UTF-8")?
-            .trim()
-            .to_string();
-        let diff_output = Command::new("git")
-            .args(["-C", &args.path, "diff", &empty_tree_ref])
-            .output()
-            .with_context(|| "failed to execute git diff")?;
-        if !diff_output.status.success() {
-            anyhow::bail!("git diff command failed");
-        }
-        String::from_utf8(diff_output.stdout).context("diff output was not valid UTF-8")?
-    };
 
     // 2. Call the engine to run the review and capture its report.
     // Ensure file reads are relative to the provided path.
-    let progress = if !args.no_progress && !args.ci {
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(ProgressStyle::with_template("{spinner} {msg}").expect("spinner template"));
-        pb.enable_steady_tick(Duration::from_millis(100));
-        pb.set_message("Reviewing diff...");
-        Some(pb)
-    } else {
-        None
-    };
-
     let progress = if !args.no_progress && !args.ci {
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::with_template("{spinner} {msg}").expect("spinner template"));
@@ -248,9 +187,6 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
         if let Some(pb) = &progress {
             pb.set_message("Running review engine...");
         }
-        if let Some(pb) = &progress {
-            pb.set_message("Running review engine...");
-        }
         let result = engine
             .run(&diff_content)
             .await
@@ -259,10 +195,6 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
             .with_context(|| "failed to restore working directory")?;
         result?
     };
-
-    if let Some(pb) = progress {
-        pb.finish_and_clear();
-    }
 
     if let Some(pb) = progress {
         pb.finish_and_clear();
@@ -280,21 +212,10 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
             for spot in &report.hotspots {
                 println!("- {}", spot);
             }
-    if args.ci {
-        println!("{}", report.summary);
-    } else {
-        println!("Summary: {}", report.summary);
-        if report.hotspots.is_empty() {
-            println!("No hotspots identified.");
-        } else {
-            println!("Top hotspots:");
-            for spot in &report.hotspots {
-                println!("- {}", spot);
-            }
         }
     }
 
-    // 3. Generate the report and write it to `args.output`.
+    // 3. Generate the report and write it to `output_path`.
     let generator: Box<dyn ReportGenerator> = match args.format {
         ReportFormat::Md => Box::new(MarkdownGenerator),
         ReportFormat::Json => Box::new(JsonGenerator),
@@ -303,8 +224,8 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
         .generate(&report)
         .map_err(|e| anyhow::anyhow!(e))?;
     let redacted_report = redact_text(engine.config(), &report_out);
-    fs::write(&args.output, &redacted_report)?;
-    log::info!("\nReview complete. Report written to {}.", args.output);
+    fs::write(&output_path, &redacted_report)?;
+    log::info!("\nReview complete. Report written to {}.", output_path);
 
     // 4. Determine if issues exceed the severity threshold.
     let threshold = args
