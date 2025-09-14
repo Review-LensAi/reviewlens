@@ -36,6 +36,29 @@ fn detects_unescaped_input_written() {
 }
 
 #[test]
+fn detects_tainted_variable_written() {
+    let scanner = ServerXssGoScanner;
+    let content = r#"package main
+
+import (
+    "fmt"
+    "net/http"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    user := r.URL.Query().Get("user")
+    fmt.Fprintf(w, "<p>"+user+"</p>")
+}
+"#;
+    let config = Config::default();
+    let issues = scanner
+        .scan("main.go", content, &config)
+        .expect("scan should work");
+    assert_eq!(issues.len(), 1);
+    assert_eq!(issues[0].line_number, 10);
+}
+
+#[test]
 fn allows_html_template() {
     let scanner = ServerXssGoScanner;
     let content = r#"
