@@ -17,7 +17,7 @@ for i in "${!fixtures[@]}"; do
   rm -rf "$dir/.git" "$dir/index.json" "$dir/review_report.md"
 
   /usr/bin/time -f "%M" -o /tmp/mem.txt \
-    cargo run --quiet -p reviewlens -- --config "$dir/reviewlens.toml" index \
+    cargo run --quiet --release -p reviewlens -- --config "$dir/reviewlens.toml" index \
     --path "$dir" --output "$dir/index.json" >/dev/null 2>&1
 
   git -C "$dir" init -q
@@ -29,7 +29,7 @@ for i in "${!fixtures[@]}"; do
 
   start=$(date +%s%N)
   /usr/bin/time -f "%M" -o /tmp/mem.txt \
-    cargo run --quiet -p reviewlens -- --config "$dir/reviewlens.toml" check \
+    cargo run --quiet --release -p reviewlens -- --config "$dir/reviewlens.toml" check \
     --path "$dir" --diff HEAD --output "$dir/review_report.md" >/dev/null 2>&1 || true
   end=$(date +%s%N)
   runtime=$(( (end-start)/1000000 ))
