@@ -49,6 +49,14 @@ fn default_config_is_sane() {
     let config = Config::default();
     assert_eq!(config.llm.provider, Provider::Null);
     assert!(config.privacy.redaction.enabled); // Should be true by default
+    assert_eq!(
+        config.privacy.redaction.patterns,
+        vec![
+            "(?i)api[_-]?key".to_string(),
+            "aws_secret_access_key".to_string(),
+            "token".to_string(),
+        ]
+    );
     assert!(config.rules.secrets.enabled);
     assert_eq!(config.rules.secrets.severity, Severity::Medium);
 }

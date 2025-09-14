@@ -147,7 +147,11 @@ impl Default for RedactionConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            patterns: Vec::new(),
+            patterns: vec![
+                "(?i)api[_-]?key".to_string(),
+                "aws_secret_access_key".to_string(),
+                "token".to_string(),
+            ],
         }
     }
 }
