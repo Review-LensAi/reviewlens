@@ -20,6 +20,12 @@ pub enum ReportFormat {
     Json,
 }
 
+#[derive(ValueEnum, Clone, Debug)]
+pub enum ReportFormat {
+    Markdown,
+    Json,
+}
+
 #[derive(Args, Debug)]
 pub struct CheckArgs {
     /// Output format for the review report.
@@ -48,8 +54,12 @@ pub struct CheckArgs {
     pub path: String,
 
     /// The path to write the review report to.
-    #[arg(short, long, default_value = "review_report.md")]
-    pub output: String,
+    #[arg(short, long)]
+    pub output: Option<String>,
+
+    /// The format of the review report.
+    #[arg(long, value_enum, default_value_t = ReportFormat::Markdown)]
+    pub format: ReportFormat,
 
     /// Minimum issue severity that will trigger a non-zero exit.
     /// Defaults to the `fail-on` setting in `reviewlens.toml` (`high` if unset).
@@ -101,6 +111,11 @@ pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> i32 {
 }
 
 async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool> {
+    let output_path = args.output.clone().unwrap_or_else(|| match args.format {
+        ReportFormat::Markdown => "review_report.md".to_string(),
+        ReportFormat::Json => "review_report.json".to_string(),
+    });
+
     log::info!("Running 'check' with the following arguments:");
     log::info!("  Path: {}", args.path);
     log::info!("  Output: {}", args.output);
@@ -222,17 +237,24 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
         }
     }
 
-    // 3. Generate the report and write it to `args.output`.
-    let generator: Box<dyn ReportGenerator> = match args.format {
-        ReportFormat::Md => Box::new(MarkdownGenerator),
-        ReportFormat::Json => Box::new(JsonGenerator),
+    // 3. Generate the report and write it to the selected output path.
+    let report_str = match args.format {
+        ReportFormat::Markdown => {
+            let generator = MarkdownGenerator;
+            generator
+                .generate(&report)
+                .map_err(|e| anyhow::anyhow!(e))?
+        }
+        ReportFormat::Json => {
+            let generator = JsonGenerator;
+            generator
+                .generate(&report)
+                .map_err(|e| anyhow::anyhow!(e))?
+        }
     };
-    let report_out = generator
-        .generate(&report)
-        .map_err(|e| anyhow::anyhow!(e))?;
-    let redacted_report = redact_text(engine.config(), &report_out);
-    fs::write(&args.output, &redacted_report)?;
-    log::info!("\nReview complete. Report written to {}.", args.output);
+    let redacted_report = redact_text(engine.config(), &report_str);
+    fs::write(&output_path, &redacted_report)?;
+    log::info!("\nReview complete. Report written to {}.", output_path);
 
     // 4. Determine if issues exceed the severity threshold.
     let threshold = args
