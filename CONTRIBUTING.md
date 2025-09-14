@@ -10,6 +10,19 @@ Thank you for considering contributing to this project! We welcome issues and pu
 4. Run `cargo fmt` before committing.
 5. Submit a pull request with a clear description of your changes.
 
+## Rust Toolchain
+
+This project pins its Rust version using `rust-toolchain.toml`. The current
+required version is Rust 1.76. Install and select this toolchain with:
+
+```bash
+rustup toolchain install 1.76
+rustup default 1.76
+```
+
+Using the pinned toolchain keeps builds consistent with the version enforced
+in continuous integration.
+
 ## Reporting Issues
 
 Please use the GitHub issue tracker to report bugs or request features. Provide as much detail as possible to help us reproduce the problem or understand your idea.
