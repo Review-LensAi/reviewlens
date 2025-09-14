@@ -18,16 +18,16 @@ pub mod rag;
 pub mod report;
 pub mod scanner;
 
-use crate::config::Config;
+use crate::config::{Config, Provider};
 use crate::error::{EngineError, Result};
 use crate::llm::{create_llm_provider, LlmProvider};
 use crate::rag::{InMemoryVectorStore, RagContextRetriever, VectorStore};
 use crate::report::{ReviewReport, RuntimeMetadata, TimingInfo};
-use crate::scanner::Scanner;
+use crate::scanner::{Issue, Scanner};
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use regex::Regex;
-use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::time::Instant;
@@ -63,6 +63,34 @@ pub fn redact_text(config: &Config, text: &str) -> String {
         }
     }
     redacted
+}
+
+/// Provides a simple on-device summary when no external LLM is configured.
+fn fallback_summary(file_count: usize, issues: &[Issue]) -> String {
+    let mut summary = format!(
+        "Reviewed {} file{}",
+        file_count,
+        if file_count == 1 { "" } else { "s" }
+    );
+    if issues.is_empty() {
+        summary.push_str(" with no issues found.");
+    } else {
+        summary.push_str(&format!(
+            " and found {} issue{}.",
+            issues.len(),
+            if issues.len() == 1 { "" } else { "s" }
+        ));
+        let highlights: Vec<String> = issues
+            .iter()
+            .take(5)
+            .map(|i| format!("{} in {}:{}", i.title, i.file_path, i.line_number))
+            .collect();
+        if !highlights.is_empty() {
+            summary.push_str(" Notable findings: ");
+            summary.push_str(&highlights.join("; "));
+        }
+    }
+    summary
 }
 
 /// The main engine struct.
@@ -289,27 +317,32 @@ impl ReviewEngine {
             redacted_contexts.join("\n")
         );
 
-        // 7. Call the selected LLM provider for suggestions.
-        if let Some(max) = self.config.budget.tokens.max_per_run {
-            if total_tokens_used >= max {
-                return Err(EngineError::TokenBudgetExceeded {
-                    used: total_tokens_used,
-                    max,
-                });
+        // 7. Produce a summary either via LLM or fallback routine.
+        let summary = if self.config.llm.provider == Provider::Null {
+            fallback_summary(filtered_files.len(), &issues)
+        } else {
+            if let Some(max) = self.config.budget.tokens.max_per_run {
+                if total_tokens_used >= max {
+                    return Err(EngineError::TokenBudgetExceeded {
+                        used: total_tokens_used,
+                        max,
+                    });
+                }
             }
-        }
-        let llm_response = self.llm.generate(&prompt).await?;
-        total_tokens_used = total_tokens_used.saturating_add(llm_response.token_usage);
-        if let Some(max) = self.config.budget.tokens.max_per_run {
-            if total_tokens_used > max {
-                return Err(EngineError::TokenBudgetExceeded {
-                    used: total_tokens_used,
-                    max,
-                });
+            let llm_response = self.llm.generate(&prompt).await?;
+            total_tokens_used = total_tokens_used.saturating_add(llm_response.token_usage);
+            if let Some(max) = self.config.budget.tokens.max_per_run {
+                if total_tokens_used > max {
+                    return Err(EngineError::TokenBudgetExceeded {
+                        used: total_tokens_used,
+                        max,
+                    });
+                }
             }
-        }
+            llm_response.content
+        };
 
-        // 6. Build and return the ReviewReport.
+        // 8. Build and return the ReviewReport.
         let elapsed_ms = start_time.elapsed().as_millis();
         let metadata = RuntimeMetadata {
             ruleset_version: RULESET_VERSION.to_string(),
@@ -320,10 +353,10 @@ impl ReviewEngine {
             },
             index_warm,
         };
-              
-        // 8. Build and return the ReviewReport.
+
+        // 9. Build and return the ReviewReport.
         let report = ReviewReport {
-            summary: llm_response.content,
+            summary,
             issues,
             code_quality,
             hotspots,

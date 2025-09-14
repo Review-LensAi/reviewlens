@@ -1,5 +1,4 @@
 use engine::config::Config;
-use engine::error::EngineError;
 use engine::ReviewEngine;
 
 fn diff_for_file(path: &str, line: &str) -> String {
@@ -10,7 +9,7 @@ fn diff_for_file(path: &str, line: &str) -> String {
 }
 
 #[tokio::test]
-async fn errors_when_token_budget_exceeded() {
+async fn ignores_token_budget_with_null_provider() {
     let temp = tempfile::tempdir().unwrap();
     let file_path = temp.path().join("file.rs");
     let content = "fn main() {}";
@@ -23,11 +22,7 @@ async fn errors_when_token_budget_exceeded() {
     let engine = ReviewEngine::new(config).unwrap();
 
     std::env::set_current_dir(temp.path()).unwrap();
-    match engine.run(&diff).await {
-        Err(EngineError::TokenBudgetExceeded { .. }) => {}
-        Err(other) => panic!("unexpected error: {other:?}"),
-        Ok(_) => panic!("expected budget error"),
-    }
+    engine.run(&diff).await.expect("run should succeed");
 }
 
 #[tokio::test]
