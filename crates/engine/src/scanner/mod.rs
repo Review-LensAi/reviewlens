@@ -9,11 +9,12 @@ use crate::{
 };
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::{Mutex, Once};
 
 /// Represents an issue found by a scanner.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Issue {
     pub title: String,
     pub description: String,
@@ -145,13 +146,17 @@ fn register_builtin_scanners() {
         register_scanner("convention-deviation", || {
             Box::new(ConventionDeviationScanner)
         });
-        register_scanner("server-xss-go", || Box::new(ServerXssGoScanner));
     });
 }
 
 /// Returns all scanners enabled via configuration.
 pub fn load_enabled_scanners(config: &Config) -> Vec<Box<dyn Scanner>> {
     register_builtin_scanners();
+
+    if config.rules.server_xss_go.enabled {
+        register_scanner("server-xss-go", || Box::new(ServerXssGoScanner));
+    }
+
     let registry = REGISTRY.lock().unwrap();
     let mut scanners: Vec<Box<dyn Scanner>> = Vec::new();
 
