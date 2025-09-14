@@ -26,7 +26,7 @@ for key, target in targets.items():
         checksums[key] = resp.read().decode().split()[0]
 
 content = formula.read_text()
-content = content.replace('version "1.0.0"', f'version "{version}"')
+content = content.replace('version "<VERSION>"', f'version "{version}"')
 for key, checksum in checksums.items():
     content = content.replace(f"<{key}>", checksum)
 formula.write_text(content)

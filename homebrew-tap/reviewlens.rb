@@ -1,25 +1,27 @@
 class ReviewLens < Formula
   desc "CLI for the Intelligent Code Review Agent"
   homepage "https://github.com/Review-LensAi/reviewlens"
-  version "1.0.0"
+  version "<VERSION>"
 
+  # The sha256 placeholders below are updated by
+  # scripts/update-homebrew-formula.py during release.
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/Review-LensAi/reviewlens/releases/download/v\#{version}/reviewlens-aarch64-apple-darwin.tar.gz"
-      sha256 "984c1d422681008b4a7d7ba7a05519cf6542b29d77b5c009836c186838d710db"
+      sha256 "<ARM64_MAC_SHA256>"
     else
       url "https://github.com/Review-LensAi/reviewlens/releases/download/v\#{version}/reviewlens-x86_64-apple-darwin.tar.gz"
-      sha256 "4272c939af27ec09cd87cbe78cedded84fc133f84bd656e3fe2827ce99933bfc"
+      sha256 "<X86_64_MAC_SHA256>"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
       url "https://github.com/Review-LensAi/reviewlens/releases/download/v\#{version}/reviewlens-aarch64-unknown-linux-gnu.tar.gz"
-      sha256 "c845d5bcfeb8e45afeb3ffeb061dcdebff296ba9f73b3d0661726afc49afc41f"
+      sha256 "<ARM64_LINUX_SHA256>"
     else
       url "https://github.com/Review-LensAi/reviewlens/releases/download/v\#{version}/reviewlens-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "ae17f91b06e660145133de6ba806e2c8194835bc8bfb9e0030adcae57870d115"
+      sha256 "<X86_64_LINUX_SHA256>"
     end
   end
 
