@@ -1,7 +1,7 @@
 //! Configuration structures for the code review agent.
 //!
 //! This module defines the structs that can be deserialized from the
-//! `reviewer.toml` configuration file.
+//! `reviewlens.toml` configuration file.
 
 use crate::error::{EngineError, Result};
 use clap::ValueEnum;
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 /// Default path for the RAG index file.
-pub const DEFAULT_INDEX_PATH: &str = ".reviewer/index/index.json";
+pub const DEFAULT_INDEX_PATH: &str = ".reviewlens/index/index.json";
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]

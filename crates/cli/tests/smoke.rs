@@ -179,9 +179,9 @@ fn check_command_respects_fail_on_from_config() {
     fs::write(repo.join("file.txt"), "api_key = \"ABCDEFGHIJKLMNOP\"\n").unwrap();
 
     // Configure high fail-on threshold
-    fs::write(repo.join("reviewer.toml"), "fail-on = \"high\"\n").unwrap();
+    fs::write(repo.join("reviewlens.toml"), "fail-on = \"high\"\n").unwrap();
 
-    let config_path = repo.join("reviewer.toml");
+    let config_path = repo.join("reviewlens.toml");
     let config_str = config_path.to_str().unwrap();
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();

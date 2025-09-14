@@ -1,13 +1,13 @@
 # Example configuration for the Intelligent Code Review Agent.
-# Copy this file to `reviewer.toml` and customize it for your project.
-# Values here can be overridden by environment variables (prefixed with `REVIEWER_`)
+# Copy this file to `reviewlens.toml` and customize it for your project.
+# Values here can be overridden by environment variables (prefixed with `REVIEWLENS_`)
 # and by CLI flags. Precedence: CLI flags > env vars > this file.
 
 # --- Paths Configuration ---
 # Optional configuration for a pre-built vector index used for
 # Retrieval-Augmented Generation.
 [index]
-path = ".reviewer/index/index.json"
+path = ".reviewlens/index/index.json"
 
 # Minimum issue severity that triggers a non-zero exit code.
 # Defaults to "low" if omitted.

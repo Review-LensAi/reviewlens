@@ -9,7 +9,7 @@ Deliver actionable output: concise PR summary, hotspots, concrete diffs/suggesti
 Be provider-agnostic: support GPT, Claude, DeepSeek, and self-hosted models behind a clean abstraction.
 Non–Vendor-Locked LLM Strategy
 Provider-agnostic interface: a single LLM “driver” trait + adapters (OpenAI, Anthropic, DeepSeek, OpenRouter/compatible, self-hosted via vLLM/TGI/LiteLLM).
-Config over code: choose model/provider via reviewer.toml / env vars; easy multi-provider fallback & routing.
+Config over code: choose model/provider via reviewlens.toml / env vars; easy multi-provider fallback & routing.
 Prompt & tool schema versioning: versioned prompts/templates, function-calling/tool schemas kept model-neutral.
 Offline/air-gapped mode: allow pure static analysis + optional local model usage (no code leaves the machine).
 Cost/latency controls: max tokens, temperature, retries, circuit breakers, and per-provider budgets.
@@ -45,7 +45,7 @@ Path allowlists/denylists, redaction of secrets before LLM calls, optional “no
 Local cache for embeddings/index; clear data-retention story.
 Initial Deliverables (Phase 1)
 Docs: README with goals, quick start, config examples.
-Configs: reviewer.toml (model, provider, thresholds, redaction rules).
+Configs: reviewlens.toml (model, provider, thresholds, redaction rules).
 Engine:
 Diff ingestion + changed-code focus
 RAG-lite indexer (main branch)

@@ -15,5 +15,5 @@ Cargo.lock
 # Secret environment variables
 .env
 
-# Local reviewer index files
-.reviewer/
+# Local reviewlens index files
+.reviewlens/

@@ -3,7 +3,7 @@
 Common issues and their fixes.
 
 ## Missing API Key
-The CLI will report an authentication error if no API key is supplied for a remote provider. Set `REVIEWER_LLM_API_KEY` or add `api_key` to `reviewer.toml`.
+The CLI will report an authentication error if no API key is supplied for a remote provider. Set `REVIEWLENS_LLM_API_KEY` or add `api_key` to `reviewlens.toml`.
 
 ## Unsupported Provider or Model
 If the provider or model name is incorrect, the CLI exits with an error. Check the values in your configuration match a supported provider and model.

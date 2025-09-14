@@ -13,7 +13,7 @@ This guide helps you install and run the `reviewlens` locally or in CI.
 ## Configuration
 1. Copy the example file:
    ```bash
-   cp reviewer.toml.example reviewer.toml
+   cp reviewlens.toml.example reviewlens.toml
    ```
 2. Set your LLM provider and API key. Configuration values can also be supplied via environment variables or CLI flags.
 

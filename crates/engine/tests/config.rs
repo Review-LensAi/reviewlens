@@ -23,7 +23,7 @@ severity = "critical"
 
     let mut path = env::temp_dir();
     let filename = format!(
-        "reviewer_test_{}.toml",
+        "reviewlens_test_{}.toml",
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()

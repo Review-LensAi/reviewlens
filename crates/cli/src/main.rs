@@ -22,54 +22,54 @@ struct Cli {
     verbose: u8,
 
     /// Path to configuration file.
-    #[arg(long, value_name = "PATH", default_value = "reviewer.toml")]
+    #[arg(long, value_name = "PATH", default_value = "reviewlens.toml")]
     config: PathBuf,
 
     /// Override the LLM provider.
-    #[arg(long, value_enum, env = "REVIEWER_LLM_PROVIDER")]
+    #[arg(long, value_enum, env = "REVIEWLENS_LLM_PROVIDER")]
     llm_provider: Option<Provider>,
 
     /// Override the LLM model.
-    #[arg(long, env = "REVIEWER_LLM_MODEL")]
+    #[arg(long, env = "REVIEWLENS_LLM_MODEL")]
     llm_model: Option<String>,
 
     /// Override the LLM API key.
-    #[arg(long, env = "REVIEWER_LLM_API_KEY")]
+    #[arg(long, env = "REVIEWLENS_LLM_API_KEY")]
     llm_api_key: Option<String>,
 
     /// Override the LLM base URL.
-    #[arg(long, env = "REVIEWER_LLM_BASE_URL")]
+    #[arg(long, env = "REVIEWLENS_LLM_BASE_URL")]
     llm_base_url: Option<String>,
 
     /// Override the path to the RAG index.
-    #[arg(long, env = "REVIEWER_INDEX_PATH")]
+    #[arg(long, env = "REVIEWLENS_INDEX_PATH")]
     index_path: Option<String>,
 
     /// Override token budget per run.
-    #[arg(long, env = "REVIEWER_BUDGET_TOKENS_MAX_PER_RUN")]
+    #[arg(long, env = "REVIEWLENS_BUDGET_TOKENS_MAX_PER_RUN")]
     budget_tokens_max_per_run: Option<u32>,
 
     /// Override generation temperature.
-    #[arg(long, env = "REVIEWER_GENERATION_TEMPERATURE")]
+    #[arg(long, env = "REVIEWLENS_GENERATION_TEMPERATURE")]
     generation_temperature: Option<f32>,
 
     /// Override allowed paths (comma separated).
-    #[arg(long, value_delimiter = ',', env = "REVIEWER_PATHS_ALLOW")]
+    #[arg(long, value_delimiter = ',', env = "REVIEWLENS_PATHS_ALLOW")]
     paths_allow: Vec<String>,
 
     /// Override denied paths (comma separated).
-    #[arg(long, value_delimiter = ',', env = "REVIEWER_PATHS_DENY")]
+    #[arg(long, value_delimiter = ',', env = "REVIEWLENS_PATHS_DENY")]
     paths_deny: Vec<String>,
 
     /// Enable or disable redaction.
-    #[arg(long, env = "REVIEWER_PRIVACY_REDACTION_ENABLED")]
+    #[arg(long, env = "REVIEWLENS_PRIVACY_REDACTION_ENABLED")]
     privacy_redaction_enabled: Option<bool>,
 
     /// Override redaction patterns (comma separated).
     #[arg(
         long,
         value_delimiter = ',',
-        env = "REVIEWER_PRIVACY_REDACTION_PATTERNS"
+        env = "REVIEWLENS_PRIVACY_REDACTION_PATTERNS"
     )]
     privacy_redaction_patterns: Vec<String>,
 

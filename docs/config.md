@@ -1,9 +1,9 @@
 # Configuration
 
-`reviewer.toml` controls how the agent behaves. Values are merged in this order of precedence:
+`reviewlens.toml` controls how the agent behaves. Values are merged in this order of precedence:
 1. CLI flags
-2. Environment variables (prefixed with `REVIEWER_`)
-3. Settings in `reviewer.toml`
+2. Environment variables (prefixed with `REVIEWLENS_`)
+3. Settings in `reviewlens.toml`
 
 ## Paths
 Define which files are scanned:
@@ -20,7 +20,7 @@ Override the location of the pre-built vector index:
 
 ```toml
 [index]
-path = ".reviewer/index/index.json"
+path = ".reviewlens/index/index.json"
 ```
 
 The older top-level `index-path` setting is deprecated.
