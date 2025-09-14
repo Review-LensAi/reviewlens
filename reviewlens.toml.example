@@ -10,8 +10,8 @@
 path = ".reviewlens/index/index.json"
 
 # Minimum issue severity that triggers a non-zero exit code.
-# Defaults to "low" if omitted.
-fail-on = "low"
+# Defaults to "high" if omitted.
+# fail-on = "high"
 
 [paths]
 # Paths to include (allow) in the analysis. Globs are supported.
@@ -64,23 +64,15 @@ churn = 1     # weight for changed lines
 # --- Rule and Scanner Configuration ---
 [rules.secrets]
 enabled = true
-severity = "medium"
+severity = "high"
 
 # Detects unsafe SQL query construction in Go code.
 [rules.sql-injection-go]
 enabled = true
-severity = "medium"
+severity = "critical"
 
 # Flags HTTP requests lacking explicit timeouts in Go.
 [rules.http-timeouts-go]
-enabled = true
-severity = "medium"
-
-[rules.convention-deviation]
-enabled = true
-severity = "medium"
-
-[rules.server-xss-go]
 enabled = true
 severity = "medium"
 

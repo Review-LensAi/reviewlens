@@ -5,6 +5,10 @@
 2. Environment variables (prefixed with `REVIEWLENS_`)
 3. Settings in `reviewlens.toml`
 
+## Fail level
+
+The `fail-on` setting specifies the minimum issue severity that will cause a non-zero exit code. If omitted, it defaults to `high`.
+
 ## Paths
 Define which files are scanned:
 ```toml
