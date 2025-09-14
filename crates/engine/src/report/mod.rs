@@ -63,6 +63,9 @@ pub trait ReportGenerator {
 /// A generator for creating Markdown-formatted reports.
 pub struct MarkdownGenerator;
 
+/// A generator for creating JSON-formatted reports.
+pub struct JsonGenerator;
+
 impl ReportGenerator for MarkdownGenerator {
     fn generate(&self, report: &ReviewReport) -> Result<String> {
         let mut md = String::new();
@@ -168,7 +171,6 @@ impl ReportGenerator for MarkdownGenerator {
 
 /// A generator for creating JSON-formatted reports.
 pub struct JsonGenerator;
-
 impl ReportGenerator for JsonGenerator {
     fn generate(&self, report: &ReviewReport) -> Result<String> {
         serde_json::to_string_pretty(report)
