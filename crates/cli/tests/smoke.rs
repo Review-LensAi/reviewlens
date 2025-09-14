@@ -238,3 +238,74 @@ fn check_command_without_upstream_or_base_ref_errors() {
 
     cmd.assert().code(2);
 }
+
+#[test]
+fn check_command_redacts_secrets_in_report() {
+    let temp = tempdir().unwrap();
+    let repo = temp.path();
+    let repo_str = repo.to_str().unwrap();
+
+    // Initialize git repository
+    StdCommand::new("git")
+        .args(["init", repo_str])
+        .output()
+        .expect("git init failed");
+    StdCommand::new("git")
+        .args(["-C", repo_str, "config", "user.email", "you@example.com"])
+        .output()
+        .expect("git config email failed");
+    StdCommand::new("git")
+        .args(["-C", repo_str, "config", "user.name", "Your Name"])
+        .output()
+        .expect("git config name failed");
+
+    // Create initial commit
+    fs::write(repo.join("file.txt"), "hello\n").unwrap();
+    StdCommand::new("git")
+        .args(["-C", repo_str, "add", "."])
+        .output()
+        .expect("git add failed");
+    StdCommand::new("git")
+        .args(["-C", repo_str, "commit", "-m", "init"])
+        .output()
+        .expect("git commit failed");
+
+    // Modify file to introduce a secret
+    fs::write(
+        repo.join("file.txt"),
+        "api_key = \"ABCDEFGHIJKLMNOPQRSTUVWX\"\n",
+    )
+    .unwrap();
+
+    // Configure redaction pattern to remove the secret value and key
+    fs::write(
+        repo.join("reviewlens.toml"),
+        "[privacy.redaction]\nenabled = true\npatterns = [\"api_key\", \"ABCDEFGHIJKLMNOPQRSTUVWX\"]\n",
+    )
+    .unwrap();
+    let config_path = repo.join("reviewlens.toml");
+    let config_str = config_path.to_str().unwrap();
+
+    let output_path = repo.join("review_report.md");
+    let output_str = output_path.to_str().unwrap();
+
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
+    cmd.args([
+        "--config",
+        config_str,
+        "check",
+        "--path",
+        repo_str,
+        "--base-ref",
+        "HEAD",
+        "--output",
+        output_str,
+    ]);
+
+    let output = cmd.output().expect("failed to execute command");
+    assert_eq!(output.status.code(), Some(1));
+    let report = fs::read_to_string(output_path).unwrap();
+    assert!(report.contains("[REDACTED]"));
+    assert!(!report.contains("api_key"));
+    assert!(!report.contains("ABCDEFGHIJKLMNOPQRSTUVWX"));
+}
