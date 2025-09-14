@@ -2,7 +2,7 @@ use engine::config::Config;
 use engine::scanner::{Scanner, SqlInjectionGoScanner};
 
 #[test]
-fn detects_dynamic_sql_concatenation() {
+fn flags_variable_used_in_db_call() {
     let scanner = SqlInjectionGoScanner;
     let content = r#"
         query := "SELECT * FROM users WHERE name = '" + user + "'"
@@ -14,7 +14,7 @@ fn detects_dynamic_sql_concatenation() {
         .expect("scan should work");
     assert_eq!(issues.len(), 1);
     let issue = &issues[0];
-    assert_eq!(issue.line_number, 2);
+    assert_eq!(issue.line_number, 3);
     assert_eq!(issue.severity, config.rules.sql_injection_go.severity);
 }
 

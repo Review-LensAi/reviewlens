@@ -9,7 +9,7 @@ use crate::{
 };
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Mutex, Once};
 
 /// Represents an issue found by a scanner.
@@ -46,8 +46,18 @@ static SQL_INJECTION_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
         Regex::new("(?i)db\\.(query|exec|queryrow)\\s*\\(\\s*fmt\\.Sprintf").unwrap(),
         Regex::new("(?i)db\\.(query|exec|queryrow)\\s*\\(\\s*\"[^\"]*\"\\s*\\+").unwrap(),
-        Regex::new("(?i)\"(select|insert|update|delete)[^\"]*\"\\s*\\+").unwrap(),
     ]
+});
+
+static SQL_ASSIGNMENT_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+        r#"(?i)^\s*(?:var\s+)?(\w+)\s*(?:=|:=)\s*"[^"]*(select|insert|update|delete)[^"]*"\s*\+\s*\w"#,
+    )
+    .unwrap()
+});
+
+static DB_QUERY_VAR_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r#"(?i)db\.(query|exec|queryrow)\s*\(\s*([a-zA-Z_][a-zA-Z0-9_]*)"#).unwrap()
 });
 
 pub struct SqlInjectionGoScanner;
@@ -58,7 +68,29 @@ impl Scanner for SqlInjectionGoScanner {
 
     fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
+        let mut assignments: HashSet<String> = HashSet::new();
         for (i, line) in content.lines().enumerate() {
+            if let Some(caps) = SQL_ASSIGNMENT_REGEX.captures(line) {
+                assignments.insert(caps[1].to_string());
+                continue;
+            }
+
+            if let Some(caps) = DB_QUERY_VAR_REGEX.captures(line) {
+                let var = &caps[2];
+                if assignments.contains(var) {
+                    issues.push(Issue {
+                        title: "Potential SQL Injection".to_string(),
+                        description: "Dynamic SQL query construction detected. Use parameterized queries instead.".to_string(),
+                        file_path: file_path.to_string(),
+                        line_number: i + 1,
+                        severity: config.rules.sql_injection_go.severity.clone(),
+                        suggested_fix: Some("Use parameterized queries instead of string concatenation.".to_string()),
+                        diff: Some(format!("-{}\n+db.Query(\"...\", params)", line.trim())),
+                    });
+                    continue;
+                }
+            }
+
             for regex in &*SQL_INJECTION_PATTERNS {
                 if regex.is_match(line) {
                     issues.push(Issue {
