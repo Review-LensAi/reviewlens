@@ -15,3 +15,5 @@ make eval
 ```
 
 This command indexes each fixture, runs the CLI, and reports per-fixture runtimes along with an overall precision metric.
+
+The harness uses release builds to ensure accurate runtime and memory metrics.
