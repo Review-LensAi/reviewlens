@@ -44,9 +44,9 @@ pub use server_xss_go::ServerXssGoScanner;
 
 static SQL_INJECTION_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
-        Regex::new("(?i)db\\.(query|exec|queryrow)\\s*\\(\\s*fmt\\.Sprintf").unwrap(),
-        Regex::new("(?i)db\\.(query|exec|queryrow)\\s*\\(\\s*\"[^\"]*\"\\s*\\+").unwrap(),
-        Regex::new("(?i)\"(select|insert|update|delete)[^\"]*\"\\s*\\+").unwrap(),
+        Regex::new(r#"(?i)fmt\.Sprintf\s*\(\s*"(select|insert|update|delete)[^"]*"\s*,"#).unwrap(),
+        Regex::new(r#"(?i)db\.(query|exec|queryrow)\s*\(\s*"[^"]*"\s*\+"#).unwrap(),
+        Regex::new(r#"(?i)"(select|insert|update|delete)[^"]*"\s*\+"#).unwrap(),
     ]
 });
 

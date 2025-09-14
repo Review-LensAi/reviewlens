@@ -13,12 +13,11 @@ pub struct SecretsScanner;
 // Using `once_cell::sync::Lazy` for one-time compilation of regexes.
 static SECRET_REGEXES: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
-        // Generic API Key
-        Regex::new(r#"(?i)api[_-]?key\s*[:=]\s*['"][a-zA-Z0-9\-_]{16,}['"]"#).unwrap(),
+        // Generic credential patterns
+        Regex::new(r#"(?i)(api_key|apikey|access_token|auth_token|client_secret|api_secret)\s*[:=]\s*['"][a-zA-Z0-9\-_/.+=]{16,}['"]"#).unwrap(),
+        Regex::new(r#"(?i)password\s*[:=]\s*['"][a-zA-Z0-9\-_/.+=]{8,}['"]"#).unwrap(),
         // AWS Secret Key
         Regex::new(r#"(?i)aws_secret_access_key\s*[:=]\s*['"][a-zA-Z0-9/+=]{40}['"]"#).unwrap(),
-        // Generic Token
-        Regex::new(r#"(?i)token\s*[:=]\s*['"][a-zA-Z0-9\-_]{20,}['"]"#).unwrap(),
         // Private Key
         Regex::new(r"-----BEGIN [A-Z ]+ PRIVATE KEY-----").unwrap(),
     ]

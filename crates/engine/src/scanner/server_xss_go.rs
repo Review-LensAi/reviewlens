@@ -8,10 +8,7 @@ pub struct ServerXssGoScanner;
 
 static TEXT_TEMPLATE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)text/template").unwrap());
 static UNSAFE_WRITE_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(
-        r"(?i)(w\.Write|fmt\.Fprintf\(w|io\.WriteString\(w)[^\n]*(r\.FormValue|r\.URL\.Query\(\)\.Get|r\.Form\.Get)"
-    )
-    .unwrap()
+    Regex::new(r#"(?i)fmt\.Fprintf\s*\(\s*w,[^)]*\+"#).unwrap()
 });
 
 impl Scanner for ServerXssGoScanner {
