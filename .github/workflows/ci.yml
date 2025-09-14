@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Run evaluation
+        id: eval
+        run: |
+          make eval | tee eval.log
+          precision=$(grep '^Precision:' eval.log | awk '{print $2}')
+          runtime=$(grep '^Total runtime:' eval.log | awk '{print $3}')
+          echo "precision=$precision" >> "$GITHUB_OUTPUT"
+          echo "runtime=$runtime" >> "$GITHUB_OUTPUT"
+
+      - name: Upload evaluation log
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: eval.log
+
+      - name: Summarize evaluation metrics
+        run: |
+          echo "### Evaluation Metrics" >> "$GITHUB_STEP_SUMMARY"
+          echo "Precision: ${{ steps.eval.outputs.precision }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Total runtime: ${{ steps.eval.outputs.runtime }}" >> "$GITHUB_STEP_SUMMARY"
