@@ -31,6 +31,7 @@ pub struct RuntimeMetadata {
 }
 
 /// Represents the final, consolidated review findings.
+#[derive(Serialize)]
 pub struct ReviewReport {
     pub summary: String,
     pub issues: Vec<Issue>,
@@ -162,5 +163,15 @@ impl ReportGenerator for MarkdownGenerator {
         md.push_str("\n```\n");
 
         Ok(md)
+    }
+}
+
+/// A generator for creating JSON-formatted reports.
+pub struct JsonGenerator;
+
+impl ReportGenerator for JsonGenerator {
+    fn generate(&self, report: &ReviewReport) -> Result<String> {
+        serde_json::to_string_pretty(report)
+            .map_err(|e| crate::error::EngineError::Report(e.to_string()))
     }
 }
