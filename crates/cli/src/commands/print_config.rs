@@ -12,6 +12,10 @@ pub struct PrintConfigArgs {
     /// If not provided, the upstream of the current branch is used.
     #[arg(long, alias = "diff")]
     pub base_ref: Option<String>,
+
+    /// The path to the repository to inspect.
+    #[arg(long, default_value = ".")]
+    pub path: String,
 }
 
 /// Executes the `print-config` subcommand.
@@ -25,7 +29,14 @@ pub fn run(args: PrintConfigArgs, config: &Config) -> anyhow::Result<()> {
         base
     } else {
         let upstream_output = Command::new("git")
-            .args(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"])
+            .args([
+                "-C",
+                &args.path,
+                "rev-parse",
+                "--abbrev-ref",
+                "--symbolic-full-name",
+                "@{u}",
+            ])
             .output()
             .map_err(|e| anyhow::anyhow!("failed to detect upstream base: {}", e))?;
         if !upstream_output.status.success() {
