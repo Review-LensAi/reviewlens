@@ -8,7 +8,7 @@
 use crate::config::Config;
 use crate::error::Result;
 use crate::rag::Document as IndexedDocument;
-use crate::scanner::{Issue, Scanner};
+use crate::scanner::{find_ignore, parse_ignore_directives, Issue, Scanner};
 use regex::Regex;
 use serde::Deserialize;
 use std::fs;
@@ -77,6 +77,7 @@ impl Scanner for ConventionDeviationScanner {
 
     fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
+        let ignores = parse_ignore_directives(content);
         let index_path = match config.index_path() {
             Some(p) => p,
             None => return Ok(issues),
@@ -94,15 +95,28 @@ impl Scanner for ConventionDeviationScanner {
             let mut matched = false;
             for pat in &patterns {
                 if pat.regex.is_match(line) {
-                    issues.push(Issue {
-                        title: "Convention deviation detected".to_string(),
-                        description: pat.description.to_string(),
-                        file_path: file_path.to_string(),
-                        line_number: i + 1,
-                        severity: config.rules.convention_deviation.severity.clone(),
-                        suggested_fix: Some(pat.description.to_string()),
-                        diff: Some(format!("-{}\n+// {}", line.trim(), pat.description)),
-                    });
+                    if let Some(ignore) = find_ignore(&ignores, i + 1, "convention-deviation") {
+                        log::info!(
+                            "Suppressed convention-deviation at {}:{}{}",
+                            file_path,
+                            i + 1,
+                            ignore
+                                .reason
+                                .as_ref()
+                                .map(|r| format!(" - {}", r))
+                                .unwrap_or_default()
+                        );
+                    } else {
+                        issues.push(Issue {
+                            title: "Convention deviation detected".to_string(),
+                            description: pat.description.to_string(),
+                            file_path: file_path.to_string(),
+                            line_number: i + 1,
+                            severity: config.rules.convention_deviation.severity.clone(),
+                            suggested_fix: Some(pat.description.to_string()),
+                            diff: Some(format!("-{}\n+// {}", line.trim(), pat.description)),
+                        });
+                    }
                     matched = true;
                     break;
                 }
@@ -110,21 +124,34 @@ impl Scanner for ConventionDeviationScanner {
             if !matched && require_result {
                 let trimmed = line.trim_start();
                 if trimmed.starts_with("fn ") && !trimmed.contains("Result<") {
-                    issues.push(Issue {
-                        title: "Convention deviation detected".to_string(),
-                        description: "Functions should return Result<T, E>".to_string(),
-                        file_path: file_path.to_string(),
-                        line_number: i + 1,
-                        severity: config.rules.convention_deviation.severity.clone(),
-                        suggested_fix: Some(
-                            "Update function signature to return Result<T, E>".to_string(),
-                        ),
-                        diff: Some(format!(
-                            "-{}\n+{} -> Result<_, _>",
-                            line.trim(),
-                            line.trim()
-                        )),
-                    });
+                    if let Some(ignore) = find_ignore(&ignores, i + 1, "convention-deviation") {
+                        log::info!(
+                            "Suppressed convention-deviation at {}:{}{}",
+                            file_path,
+                            i + 1,
+                            ignore
+                                .reason
+                                .as_ref()
+                                .map(|r| format!(" - {}", r))
+                                .unwrap_or_default()
+                        );
+                    } else {
+                        issues.push(Issue {
+                            title: "Convention deviation detected".to_string(),
+                            description: "Functions should return Result<T, E>".to_string(),
+                            file_path: file_path.to_string(),
+                            line_number: i + 1,
+                            severity: config.rules.convention_deviation.severity.clone(),
+                            suggested_fix: Some(
+                                "Update function signature to return Result<T, E>".to_string(),
+                            ),
+                            diff: Some(format!(
+                                "-{}\n+{} -> Result<_, _>",
+                                line.trim(),
+                                line.trim()
+                            )),
+                        });
+                    }
                 }
             }
         }

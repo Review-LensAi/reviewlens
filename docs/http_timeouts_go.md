@@ -14,3 +14,14 @@ enabled = true
 severity = "medium"
 ```
 
+## Suppression
+
+To skip this rule for a specific line, add:
+
+```text
+// reviewlens:ignore http-timeouts-go [reason]
+```
+
+The comment may appear on the same line or the one directly above. Any optional
+reason provided will be recorded in the logs when the finding is suppressed.
+
