@@ -14,3 +14,9 @@ enabled = true
 severity = "medium"
 ```
 
+## Testing notes
+
+When writing tests for this rule, construct a `Config` that explicitly enables only
+`sql-injection-go`. Relying on `Config::default()` can pull in other rules and lead to
+non-deterministic behaviour if those rules modify shared state during testing.
+
