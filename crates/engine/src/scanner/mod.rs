@@ -9,11 +9,12 @@ use crate::{
 };
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::{Mutex, Once};
 
 /// Represents an issue found by a scanner.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Issue {
     pub title: String,
     pub description: String,

@@ -1,16 +1,22 @@
 //! The `check` subcommand.
 
-use clap::Args;
+use clap::{Args, ValueEnum};
 use engine::config::Severity;
 use engine::error::EngineError;
 use engine::redact_text;
-use engine::report::{MarkdownGenerator, ReportGenerator};
+use engine::report::{JsonGenerator, MarkdownGenerator, ReportGenerator};
 use engine::ReviewEngine;
 use std::env;
 use std::fs;
 use std::process::Command;
 
 use anyhow::Context;
+
+#[derive(ValueEnum, Clone, Debug)]
+pub enum ReportFormat {
+    Markdown,
+    Json,
+}
 
 #[derive(Args, Debug)]
 pub struct CheckArgs {
@@ -24,8 +30,12 @@ pub struct CheckArgs {
     pub path: String,
 
     /// The path to write the review report to.
-    #[arg(short, long, default_value = "review_report.md")]
-    pub output: String,
+    #[arg(short, long)]
+    pub output: Option<String>,
+
+    /// The format of the review report.
+    #[arg(long, value_enum, default_value_t = ReportFormat::Markdown)]
+    pub format: ReportFormat,
 
     /// Minimum issue severity that will trigger a non-zero exit.
     /// Defaults to the `fail-on` setting in `reviewlens.toml` (`low` if unset).
@@ -65,9 +75,15 @@ pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> i32 {
 }
 
 async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool> {
+    let output_path = args.output.clone().unwrap_or_else(|| match args.format {
+        ReportFormat::Markdown => "review_report.md".to_string(),
+        ReportFormat::Json => "review_report.json".to_string(),
+    });
+
     log::info!("Running 'check' with the following arguments:");
     log::info!("  Path: {}", args.path);
-    log::info!("  Output: {}", args.output);
+    log::info!("  Format: {:?}", args.format);
+    log::info!("  Output: {}", output_path);
 
     // Resolve the base reference, falling back to upstream if not provided.
     let base_ref = if let Some(base) = args.base_ref.clone() {
@@ -133,14 +149,24 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
         }
     }
 
-    // 3. Generate the markdown report and write it to `args.output`.
-    let generator = MarkdownGenerator;
-    let report_md = generator
-        .generate(&report)
-        .map_err(|e| anyhow::anyhow!(e))?;
-    let redacted_report = redact_text(engine.config(), &report_md);
-    fs::write(&args.output, &redacted_report)?;
-    log::info!("\nReview complete. Report written to {}.", args.output);
+    // 3. Generate the report and write it to the selected output path.
+    let report_str = match args.format {
+        ReportFormat::Markdown => {
+            let generator = MarkdownGenerator;
+            generator
+                .generate(&report)
+                .map_err(|e| anyhow::anyhow!(e))?
+        }
+        ReportFormat::Json => {
+            let generator = JsonGenerator;
+            generator
+                .generate(&report)
+                .map_err(|e| anyhow::anyhow!(e))?
+        }
+    };
+    let redacted_report = redact_text(engine.config(), &report_str);
+    fs::write(&output_path, &redacted_report)?;
+    log::info!("\nReview complete. Report written to {}.", output_path);
 
     // 4. Determine if issues exceed the severity threshold.
     let threshold = args
