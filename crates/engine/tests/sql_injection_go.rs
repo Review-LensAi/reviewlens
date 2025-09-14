@@ -1,5 +1,24 @@
-use engine::config::Config;
+use engine::config::{Config, RuleConfig, RulesConfig, Severity};
 use engine::scanner::{Scanner, SqlInjectionGoScanner};
+
+/// Build a configuration fixture with only the SQL injection rule enabled.
+///
+/// Using `Config::default()` pulled in all rules which could introduce
+/// nondeterministic behaviour if other tests mutate global configuration.
+/// By constructing the relevant rule explicitly we keep this test isolated
+/// and deterministic.
+fn test_config() -> Config {
+    Config {
+        rules: RulesConfig {
+            sql_injection_go: RuleConfig {
+                enabled: true,
+                severity: Severity::Medium,
+            },
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
 
 #[test]
 fn detects_dynamic_sql_concatenation() {
@@ -8,7 +27,7 @@ fn detects_dynamic_sql_concatenation() {
         query := "SELECT * FROM users WHERE name = '" + user + "'"
         rows, _ := db.Query(query)
     "#;
-    let config = Config::default();
+    let config = test_config();
     let issues = scanner
         .scan("user.go", content, &config)
         .expect("scan should work");
@@ -24,7 +43,7 @@ fn allows_parameterized_query() {
     let content = r#"
         rows, _ := db.Query("SELECT * FROM users WHERE id = ?", id)
     "#;
-    let config = Config::default();
+    let config = test_config();
     let issues = scanner
         .scan("user.go", content, &config)
         .expect("scan should work");
