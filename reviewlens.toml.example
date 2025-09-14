@@ -10,8 +10,8 @@
 path = ".reviewlens/index/index.json"
 
 # Minimum issue severity that triggers a non-zero exit code.
-# Defaults to "low" if omitted.
-fail-on = "low"
+# Defaults to "high" if omitted.
+# fail-on = "high"
 
 [paths]
 # Paths to include (allow) in the analysis. Globs are supported.
@@ -77,10 +77,6 @@ enabled = true
 severity = "medium"
 
 [rules.convention-deviation]
-enabled = true
-severity = "medium"
-
-[rules.server-xss-go]
 enabled = true
 severity = "medium"
 

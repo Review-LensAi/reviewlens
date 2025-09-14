@@ -93,6 +93,8 @@ fn check_command_respects_path_argument() {
         repo_str,
         "--base-ref",
         "HEAD",
+        "--fail-on",
+        "low",
         "--output",
         output_str,
     ]);
@@ -140,7 +142,15 @@ fn check_command_reports_issues_and_exit_code() {
     fs::write(repo.join("file.txt"), "api_key = \"ABCDEFGHIJKLMNOP\"\n").unwrap();
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
-    cmd.args(["check", "--path", repo_str, "--base-ref", "HEAD"]);
+    cmd.args([
+        "check",
+        "--path",
+        repo_str,
+        "--base-ref",
+        "HEAD",
+        "--fail-on",
+        "low",
+    ]);
 
     cmd.assert().code(1);
 }
@@ -298,6 +308,8 @@ fn check_command_redacts_secrets_in_report() {
         repo_str,
         "--base-ref",
         "HEAD",
+        "--fail-on",
+        "low",
         "--output",
         output_str,
     ]);
