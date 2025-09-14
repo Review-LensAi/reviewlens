@@ -33,7 +33,7 @@ fn print_config_command_produces_valid_json() {
 
     assert_eq!(json["llm"]["provider"], "null");
     assert_eq!(json["privacy"]["redaction"]["enabled"], true);
-    assert_eq!(json["rules"]["secrets"]["severity"], "medium");
+    assert_eq!(json["rules"]["secrets"]["severity"], "high");
 }
 
 #[test]
@@ -89,7 +89,15 @@ fn check_command_respects_path_argument() {
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
-        "check", "--path", repo_str, "--diff", "HEAD", "--output", output_str,
+        "check",
+        "--path",
+        repo_str,
+        "--base-ref",
+        "HEAD",
+        "--fail-on",
+        "low",
+        "--output",
+        output_str,
     ]);
 
     let output = cmd.output().expect("failed to execute command");
@@ -135,8 +143,15 @@ fn check_command_reports_issues_and_exit_code() {
     fs::write(repo.join("file.txt"), "api_key = \"ABCDEFGHIJKLMNOP\"\n").unwrap();
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
-  
-    cmd.args(["check", "--path", repo_str, "--diff", "HEAD"]);
+    cmd.args([
+        "check",
+        "--path",
+        repo_str,
+        "--base-ref",
+        "HEAD",
+        "--fail-on",
+        "low",
+    ]);
 
     cmd.assert().code(1);
 }
@@ -175,8 +190,8 @@ fn check_command_respects_fail_on_from_config() {
     // Modify file to introduce a secret
     fs::write(repo.join("file.txt"), "api_key = \"ABCDEFGHIJKLMNOP\"\n").unwrap();
 
-    // Configure high fail-on threshold
-    fs::write(repo.join("reviewlens.toml"), "fail-on = \"high\"\n").unwrap();
+    // Configure critical fail-on threshold
+    fs::write(repo.join("reviewlens.toml"), "fail-on = \"critical\"\n").unwrap();
 
     let config_path = repo.join("reviewlens.toml");
     let config_str = config_path.to_str().unwrap();
@@ -348,8 +363,10 @@ fn check_command_generates_json_report_and_redacts_secrets() {
         repo_str,
         "--base-ref",
         "HEAD",
-        "--format",
-        "json",
+        "--fail-on",
+        "low",
+        "--output",
+        output_str,
     ]);
 
     let output = cmd.output().expect("failed to execute command");

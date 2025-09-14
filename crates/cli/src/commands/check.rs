@@ -1,35 +1,20 @@
 //! The `check` subcommand.
 
 use clap::{Args, ValueEnum};
+use clap::{Args, ValueEnum};
 use engine::config::Severity;
 use engine::error::EngineError;
 use engine::redact_text;
+use engine::report::{JsonGenerator, MarkdownGenerator, ReportGenerator};
 use engine::report::{JsonGenerator, MarkdownGenerator, ReportGenerator};
 use engine::ReviewEngine;
 use std::env;
 use std::fs;
 use std::process::Command;
 use std::time::Duration;
+use std::time::Duration;
 
 use anyhow::Context;
-use std::str::FromStr;
-
-#[derive(Debug, Clone)]
-pub enum DiffTarget {
-    Auto,
-    Ref(String),
-}
-
-impl FromStr for DiffTarget {
-    type Err = std::convert::Infallible;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            s if s.eq_ignore_ascii_case("auto") => Ok(DiffTarget::Auto),
-            other => Ok(DiffTarget::Ref(other.to_string())),
-        }
-    }
-  
 use indicatif::{ProgressBar, ProgressStyle};
 
 #[derive(Clone, ValueEnum, Debug)]
@@ -38,19 +23,8 @@ pub enum ReportFormat {
     Json,
 }
 
-#[derive(ValueEnum, Clone, Debug)]
-pub enum ReportFormat {
-    Markdown,
-    Json,
-}
-
 #[derive(Args, Debug)]
 pub struct CheckArgs {
-    /// The diff reference to compare against for generating a diff.
-    /// Use `auto` to detect the upstream of the current branch.
-    #[arg(long, alias = "base-ref", default_value = "auto")]
-    pub diff: DiffTarget,
-  
     /// Output format for the review report.
     #[arg(long, value_enum, default_value = "md")]
     pub format: ReportFormat,
@@ -61,7 +35,7 @@ pub struct CheckArgs {
     pub diff: String,
 
     /// Run in CI mode (non-interactive).
-    #[arg(long)]
+    #[arg(long, default_value_t = false)]
     pub ci: bool,
 
     /// Analyze only files changed relative to the diff base.
@@ -69,7 +43,7 @@ pub struct CheckArgs {
     pub only_changed: bool,
 
     /// Disable progress output.
-    #[arg(long)]
+    #[arg(long, default_value_t = false)]
     pub no_progress: bool,
 
     /// The path to the repository to check.
@@ -85,6 +59,7 @@ pub struct CheckArgs {
     pub format: ReportFormat,
 
     /// Minimum issue severity that will trigger a non-zero exit.
+    /// Defaults to the `fail-on` setting in `reviewlens.toml` (`high` if unset).
     /// Defaults to the `fail-on` setting in `reviewlens.toml` (`high` if unset).
     #[arg(long, value_enum)]
     pub fail_on: Option<Severity>,
@@ -154,36 +129,64 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
         log::info!("Starting review...");
     }
 
-    // Resolve the diff target, falling back to upstream if set to auto.
-    let base_ref = match &args.diff {
-        DiffTarget::Ref(base) => base.clone(),
-        DiffTarget::Auto => {
-            let upstream_output = Command::new("git")
-                .args([
-                    "-C",
-                    &args.path,
-                    "rev-parse",
-                    "--abbrev-ref",
-                    "--symbolic-full-name",
-                    "@{u}",
-                ])
-                .output()
-                .map_err(|e| {
-                    EngineError::Config(format!("failed to detect upstream base: {}", e))
-                })?;
-            if !upstream_output.status.success() {
-                return Err(
-                    EngineError::Config("failed to detect upstream base reference".into()).into(),
-                );
-            }
-            String::from_utf8(upstream_output.stdout)
-                .context("upstream output was not valid UTF-8")?
-                .trim()
-                .to_string()
+    // Resolve the base reference, falling back to upstream if not provided.
+    let base_ref = if args.diff != "auto" {
+        args.diff.clone()
+    } else {
+        let upstream_output = Command::new("git")
+            .args([
+                "-C",
+                &args.path,
+                "rev-parse",
+                "--abbrev-ref",
+                "--symbolic-full-name",
+                "@{u}",
+            ])
+            .output()
+            .map_err(|e| EngineError::Config(format!("failed to detect upstream base: {}", e)))?;
+        if !upstream_output.status.success() {
+            return Err(
+                EngineError::Config("failed to detect upstream base reference".into()).into(),
+            );
         }
+        String::from_utf8(upstream_output.stdout)
+            .context("upstream output was not valid UTF-8")?
+            .trim()
+            .to_string()
     };
     log::info!("  Base ref: {}", base_ref);
 
+    // 1. Generate the diff.
+    let diff_content = if args.only_changed {
+        let diff_output = Command::new("git")
+            .args(["-C", &args.path, "diff", &base_ref])
+            .output()
+            .with_context(|| "failed to execute git diff")?;
+        if !diff_output.status.success() {
+            anyhow::bail!("git diff command failed");
+        }
+        String::from_utf8(diff_output.stdout).context("diff output was not valid UTF-8")?
+    } else {
+        let empty_tree = Command::new("git")
+            .args(["-C", &args.path, "hash-object", "-t", "tree", "/dev/null"])
+            .output()
+            .with_context(|| "failed to hash empty tree")?;
+        if !empty_tree.status.success() {
+            anyhow::bail!("git hash-object command failed");
+        }
+        let empty_tree_ref = String::from_utf8(empty_tree.stdout)
+            .context("empty tree hash output was not valid UTF-8")?
+            .trim()
+            .to_string();
+        let diff_output = Command::new("git")
+            .args(["-C", &args.path, "diff", &empty_tree_ref])
+            .output()
+            .with_context(|| "failed to execute git diff")?;
+        if !diff_output.status.success() {
+            anyhow::bail!("git diff command failed");
+        }
+        String::from_utf8(diff_output.stdout).context("diff output was not valid UTF-8")?
+    };
     // 1. Generate the diff.
     let diff_content = if args.only_changed {
         let diff_output = Command::new("git")
@@ -228,10 +231,23 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
         None
     };
 
+    let progress = if !args.no_progress && !args.ci {
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(ProgressStyle::with_template("{spinner} {msg}").expect("spinner template"));
+        pb.enable_steady_tick(Duration::from_millis(100));
+        pb.set_message("Reviewing diff...");
+        Some(pb)
+    } else {
+        None
+    };
+
     let report = {
         let original_dir = env::current_dir().with_context(|| "failed to get current directory")?;
         env::set_current_dir(&args.path)
             .with_context(|| format!("failed to change to directory {}", args.path))?;
+        if let Some(pb) = &progress {
+            pb.set_message("Running review engine...");
+        }
         if let Some(pb) = &progress {
             pb.set_message("Running review engine...");
         }
@@ -243,6 +259,10 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
             .with_context(|| "failed to restore working directory")?;
         result?
     };
+
+    if let Some(pb) = progress {
+        pb.finish_and_clear();
+    }
 
     if let Some(pb) = progress {
         pb.finish_and_clear();
@@ -260,27 +280,31 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
             for spot in &report.hotspots {
                 println!("- {}", spot);
             }
+    if args.ci {
+        println!("{}", report.summary);
+    } else {
+        println!("Summary: {}", report.summary);
+        if report.hotspots.is_empty() {
+            println!("No hotspots identified.");
+        } else {
+            println!("Top hotspots:");
+            for spot in &report.hotspots {
+                println!("- {}", spot);
+            }
         }
     }
 
-    // 3. Generate the report and write it to the selected output path.
-    let report_str = match args.format {
-        ReportFormat::Markdown => {
-            let generator = MarkdownGenerator;
-            generator
-                .generate(&report)
-                .map_err(|e| anyhow::anyhow!(e))?
-        }
-        ReportFormat::Json => {
-            let generator = JsonGenerator;
-            generator
-                .generate(&report)
-                .map_err(|e| anyhow::anyhow!(e))?
-        }
+    // 3. Generate the report and write it to `args.output`.
+    let generator: Box<dyn ReportGenerator> = match args.format {
+        ReportFormat::Md => Box::new(MarkdownGenerator),
+        ReportFormat::Json => Box::new(JsonGenerator),
     };
-    let redacted_report = redact_text(engine.config(), &report_str);
-    fs::write(&output_path, &redacted_report)?;
-    log::info!("\nReview complete. Report written to {}.", output_path);
+    let report_out = generator
+        .generate(&report)
+        .map_err(|e| anyhow::anyhow!(e))?;
+    let redacted_report = redact_text(engine.config(), &report_out);
+    fs::write(&args.output, &redacted_report)?;
+    log::info!("\nReview complete. Report written to {}.", args.output);
 
     // 4. Determine if issues exceed the severity threshold.
     let threshold = args

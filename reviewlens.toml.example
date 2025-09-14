@@ -64,19 +64,14 @@ churn = 1     # weight for changed lines
 # --- Rule and Scanner Configuration ---
 [rules.secrets]
 enabled = true
-severity = "medium"
+severity = "high"
 
 # Detects unsafe SQL query construction in Go code.
 [rules.sql-injection-go]
 enabled = true
-severity = "medium"
+severity = "critical"
 
 # Flags HTTP requests lacking explicit timeouts in Go.
 [rules.http-timeouts-go]
 enabled = true
 severity = "medium"
-
-[rules.convention-deviation]
-enabled = true
-severity = "medium"
-

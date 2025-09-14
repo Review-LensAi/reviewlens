@@ -281,18 +281,46 @@ impl Default for RuleConfig {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct RulesConfig {
-    #[serde(default)]
+    #[serde(default = "default_secrets_rule")]
     pub secrets: RuleConfig,
-    #[serde(default)]
+    #[serde(default = "default_sql_injection_go_rule")]
     pub sql_injection_go: RuleConfig,
-    #[serde(default)]
+    #[serde(default = "default_http_timeouts_go_rule")]
     pub http_timeouts_go: RuleConfig,
-    #[serde(default)]
-    pub convention_deviation: RuleConfig,
-    #[serde(default = "default_disabled_rule")]
-    pub server_xss_go: RuleConfig,
+}
+
+fn default_secrets_rule() -> RuleConfig {
+    RuleConfig {
+        enabled: true,
+        severity: Severity::High,
+    }
+}
+
+fn default_sql_injection_go_rule() -> RuleConfig {
+    RuleConfig {
+        enabled: true,
+        severity: Severity::Critical,
+    }
+}
+
+fn default_http_timeouts_go_rule() -> RuleConfig {
+    RuleConfig {
+        enabled: true,
+        severity: Severity::Medium,
+    }
+}
+
+impl Default for RulesConfig {
+    fn default() -> Self {
+        Self {
+            secrets: default_secrets_rule(),
+            sql_injection_go: default_sql_injection_go_rule(),
+            http_timeouts_go: default_http_timeouts_go_rule(),
+        }
+    }
 }
 
 fn default_disabled_rule() -> RuleConfig {
@@ -354,5 +382,6 @@ impl Default for Config {
 }
 
 fn default_fail_on() -> Severity {
+    Severity::High
     Severity::High
 }

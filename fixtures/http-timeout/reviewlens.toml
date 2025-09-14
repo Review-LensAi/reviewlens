@@ -6,7 +6,6 @@ allow = ["**/*"]
 deny = []
 
 [rules]
-secrets = { enabled = true, severity = "medium" }
-sql-injection-go = { enabled = true, severity = "medium" }
+secrets = { enabled = true, severity = "high" }
+sql-injection-go = { enabled = true, severity = "critical" }
 http-timeouts-go = { enabled = true, severity = "medium" }
-server-xss-go = { enabled = true, severity = "medium" }
