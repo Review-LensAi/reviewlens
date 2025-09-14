@@ -1,6 +1,7 @@
 use assert_cmd::Command;
 use serde_json::Value;
 use std::fs;
+use std::path::Path;
 use std::process::Command as StdCommand;
 use tempfile::tempdir;
 
@@ -197,20 +198,14 @@ fn check_command_respects_fail_on_from_config() {
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
-        "--config",
-        config_str,
-        "check",
-        "--path",
-        repo_str,
-        "--base-ref",
-        "HEAD",
+        "--config", config_str, "check", "--path", repo_str, "--diff", "HEAD",
     ]);
 
     cmd.assert().code(0);
 }
 
 #[test]
-fn check_command_without_upstream_or_base_ref_errors() {
+fn check_command_without_upstream_or_diff_errors() {
     let temp = tempdir().unwrap();
     let repo = temp.path();
     let repo_str = repo.to_str().unwrap();
@@ -301,6 +296,66 @@ fn check_command_redacts_secrets_in_report() {
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
+        "--config", config_str, "check", "--path", repo_str, "--diff", "HEAD", "--output", output_str,
+    ]);
+
+    let output = cmd.output().expect("failed to execute command");
+    assert_eq!(output.status.code(), Some(1));
+    let report = fs::read_to_string(output_path).unwrap();
+    assert!(report.contains("[REDACTED]"));
+    assert!(!report.contains("api_key"));
+    assert!(!report.contains("ABCDEFGHIJKLMNOPQRSTUVWX"));
+}
+
+#[test]
+fn check_command_generates_json_report_and_redacts_secrets() {
+    let temp = tempdir().unwrap();
+    let repo = temp.path();
+    let repo_str = repo.to_str().unwrap();
+
+    // Initialize git repository
+    StdCommand::new("git")
+        .args(["init", repo_str])
+        .output()
+        .expect("git init failed");
+    StdCommand::new("git")
+        .args(["-C", repo_str, "config", "user.email", "you@example.com"])
+        .output()
+        .expect("git config email failed");
+    StdCommand::new("git")
+        .args(["-C", repo_str, "config", "user.name", "Your Name"])
+        .output()
+        .expect("git config name failed");
+
+    // Create initial commit
+    fs::write(repo.join("file.txt"), "hello\n").unwrap();
+    StdCommand::new("git")
+        .args(["-C", repo_str, "add", "."])
+        .output()
+        .expect("git add failed");
+    StdCommand::new("git")
+        .args(["-C", repo_str, "commit", "-m", "init"])
+        .output()
+        .expect("git commit failed");
+
+    // Modify file to introduce a secret
+    fs::write(
+        repo.join("file.txt"),
+        "api_key = \"ABCDEFGHIJKLMNOPQRSTUVWX\"\n",
+    )
+    .unwrap();
+
+    // Configure redaction pattern to remove the secret value and key
+    fs::write(
+        repo.join("reviewlens.toml"),
+        "[privacy.redaction]\nenabled = true\npatterns = [\"api_key\", \"ABCDEFGHIJKLMNOPQRSTUVWX\"]\n",
+    )
+    .unwrap();
+    let config_path = repo.join("reviewlens.toml");
+    let config_str = config_path.to_str().unwrap();
+
+    let mut cmd = Command::cargo_bin("reviewlens").unwrap();
+    cmd.args([
         "--config",
         config_str,
         "check",
@@ -316,7 +371,10 @@ fn check_command_redacts_secrets_in_report() {
 
     let output = cmd.output().expect("failed to execute command");
     assert_eq!(output.status.code(), Some(1));
-    let report = fs::read_to_string(output_path).unwrap();
+
+    let report_path = Path::new("review_report.json");
+    assert!(report_path.exists());
+    let report = fs::read_to_string(report_path).unwrap();
     assert!(report.contains("[REDACTED]"));
     assert!(!report.contains("api_key"));
     assert!(!report.contains("ABCDEFGHIJKLMNOPQRSTUVWX"));

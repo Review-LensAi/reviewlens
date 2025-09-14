@@ -5,17 +5,21 @@ use engine::{
 use serde_json::json;
 use std::fs;
 use std::io::Write;
-use tempfile::{tempdir, NamedTempFile};
+use tempfile::{tempdir, Builder, NamedTempFile};
 
 fn build_index(docs: &[(&str, &str)]) -> NamedTempFile {
-    let mut file = NamedTempFile::new().expect("create temp index");
+    let mut file = Builder::new()
+        .suffix(".json.zst")
+        .tempfile()
+        .expect("create temp index");
     let documents: Vec<_> = docs
         .iter()
         .map(|(f, c)| json!({"filename": f, "content": c}))
         .collect();
     let data = json!({"documents": documents});
-    file.write_all(data.to_string().as_bytes())
-        .expect("write index");
+    let json = serde_json::to_vec(&data).expect("serialize index");
+    let compressed = zstd::encode_all(&json[..], 0).expect("compress index");
+    file.write_all(&compressed).expect("write index");
     file.flush().expect("flush index");
     file
 }

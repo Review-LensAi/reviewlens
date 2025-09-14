@@ -1,5 +1,5 @@
 [index]
-path = "index.json"
+path = "index.json.zst"
 
 [paths]
 allow = ["**/*"]

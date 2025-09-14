@@ -14,18 +14,18 @@ for i in "${!fixtures[@]}"; do
   exp=${expected[$i]}
   dir="fixtures/$name"
 
-  rm -rf "$dir/.git" "$dir/index.json" "$dir/review_report.md"
+  rm -rf "$dir/.git" "$dir/index.json.zst" "$dir/review_report.md"
 
   /usr/bin/time -f "%M" -o /tmp/mem.txt \
     cargo run --quiet --release -p reviewlens -- --config "$dir/reviewlens.toml" index \
-    --path "$dir" --output "$dir/index.json" >/dev/null 2>&1
+    --path "$dir" --output "$dir/index.json.zst" >/dev/null 2>&1
 
   git -C "$dir" init -q
   git -C "$dir" config user.name "benebobaa"
   git -C "$dir" config user.email "bensatriya3@gmail.com"
   git -C "$dir" commit -qm init --allow-empty
   git -C "$dir" add .
-  git -C "$dir" reset index.json reviewlens.toml 2>/dev/null || true
+  git -C "$dir" reset index.json.zst reviewlens.toml 2>/dev/null || true
 
   start=$(date +%s%N)
   /usr/bin/time -f "%M" -o /tmp/mem.txt \

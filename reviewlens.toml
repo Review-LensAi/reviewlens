@@ -5,7 +5,7 @@
 # Optional configuration for a pre-built vector index used for
 # Retrieval-Augmented Generation.
 [index]
-path = ".reviewlens/index/index.json"
+path = ".reviewlens/index/index.json.zst"
 
 [paths]
 # Paths to include (allow) in the analysis. Globs are supported.
