@@ -21,3 +21,14 @@ directly using `fmt.Fprintf`, `io.WriteString`, or `w.Write`.
 enabled = true
 severity = "medium"
 ```
+
+## Suppression
+
+Ignore a specific finding by adding:
+
+```text
+// reviewlens:ignore server-xss-go [reason]
+```
+
+Place the comment on the same line or just above the code. An optional reason
+will be logged when the issue is suppressed.
