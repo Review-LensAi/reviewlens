@@ -5,7 +5,7 @@ This guide helps you install and run the `reviewlens` locally or in CI.
 ## Installation
 - Use the install script:
   ```bash
-  curl -fsSL https://raw.githubusercontent.com/some-org/intelligent-code-reviewer/main/install.sh | sh
+  curl -fsSL https://raw.githubusercontent.com/Review-LensAi/reviewlens/main/install.sh | sh
   ```
 - Download a release binary and place it in your `PATH`.
 - Or build from source with `cargo install`.
@@ -20,7 +20,7 @@ This guide helps you install and run the `reviewlens` locally or in CI.
 ## Inspect Effective Configuration
 After configuring, you can inspect the merged settings, compiled providers, and the detected base reference:
 ```bash
-reviewer-cli print-config
+reviewlens print-config
 ```
 Look for the `Base ref:` line in the output to see which upstream branch will be used for diffs.
 

@@ -75,7 +75,7 @@ Code review has become a bottleneck. Large, AI-generated PRs overwhelm human rev
 
 ### In Scope
 
-* **CLI**: `reviewer check --path . --diff <ref>` (local & CI).
+* **CLI**: `reviewlens check --path . --diff <ref>` (local & CI).
 
   * `--diff` defaults to upstream base (auto-detected); override with `--base-ref <ref>`.
 * **Outputs**: `review_report.md` + stdout summary; CI-friendly exit codes.
@@ -104,7 +104,7 @@ Code review has become a bottleneck. Large, AI-generated PRs overwhelm human rev
 
 **A1. Install & Help**
 *As a developer, I can install the CLI and see commands.*
-**AC**: `reviewer --help` lists `check`, `index`, `print-config`, `version`.
+**AC**: `reviewlens --help` lists `check`, `index`, `print-config`, `version`.
 
 **A2. Config**
 *As a developer, I can configure models, budgets, and path filters.*
@@ -171,7 +171,7 @@ Code review has become a bottleneck. Large, AI-generated PRs overwhelm human rev
 
 ### Components
 
-* **CLI (`reviewer`)** — args parsing, config loading, orchestrates a review run.
+* **CLI (`reviewlens`)** — args parsing, config loading, orchestrates a review run.
 * **Engine (library)** — diff ingestion → rules → (optional) LLM → report.
 * **Ruleset (rules-go)** — SAST-lite checks for Go + generic patterns.
 * **RAG-lite Indexer** — local symbol/pattern index from base branch.
@@ -343,7 +343,7 @@ path = ".reviewer/index"
 **DX/Distribution**
 
 * Signed release artifacts + checksums; Homebrew tap; Docker image.
-* `reviewer --help` accurate; `print-config` shows effective config + compiled-in providers.
+* `reviewlens --help` accurate; `print-config` shows effective config + compiled-in providers.
 
 **Docs/Policy**
 
@@ -364,10 +364,10 @@ path = ".reviewer/index"
 
 ### B. Commands (CLI)
 
-* `reviewer check [--path PATH] [--diff REF] [--base-ref REF] [--fail-on {critical,high,medium,low}]`
-* `reviewer index [--path PATH]`
-* `reviewer print-config`
-* `reviewer version`
+* `reviewlens check [--path PATH] [--diff REF] [--base-ref REF] [--fail-on {critical,high,medium,low}]`
+* `reviewlens index [--path PATH]`
+* `reviewlens print-config`
+* `reviewlens version`
 
 ### C. Definitions
 

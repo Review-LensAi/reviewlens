@@ -14,7 +14,7 @@ Prompt & tool schema versioning: versioned prompts/templates, function-calling/t
 Offline/air-gapped mode: allow pure static analysis + optional local model usage (no code leaves the machine).
 Cost/latency controls: max tokens, temperature, retries, circuit breakers, and per-provider budgets.
 What We’re Building First (CLI-First MVP)
-CLI command: reviewer check --path . --diff main
+CLI command: reviewlens check --path . --diff main
 Outputs:
 review_report.md (summary, risks, suggested fixes, Mermaid diagrams)
 Exit codes for CI gating (0 clean, 1 issues)
