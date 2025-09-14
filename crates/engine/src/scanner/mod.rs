@@ -123,28 +123,6 @@ impl Scanner for SqlInjectionGoScanner {
                             diff: Some(format!("-{}\n+db.Query(\"...\", params)", line.trim())),
                         });
                     }
-                    if let Some(ignore) = find_ignore(&ignores, i + 1, "sql-injection-go") {
-                        log::info!(
-                            "Suppressed sql-injection-go at {}:{}{}",
-                            file_path,
-                            i + 1,
-                            ignore
-                                .reason
-                                .as_ref()
-                                .map(|r| format!(" - {}", r))
-                                .unwrap_or_default()
-                        );
-                    } else {
-                        issues.push(Issue {
-                            title: "Potential SQL Injection".to_string(),
-                            description: "Dynamic SQL query construction detected. Use parameterized queries instead.".to_string(),
-                            file_path: file_path.to_string(),
-                            line_number: i + 1,
-                            severity: config.rules.sql_injection_go.severity.clone(),
-                            suggested_fix: Some("Use parameterized queries instead of string concatenation.".to_string()),
-                            diff: Some(format!("-{}\n+db.Query(\"...\", params)", line.trim())),
-                        });
-                    }
                     break;
                 }
             }
@@ -172,38 +150,6 @@ impl Scanner for HttpTimeoutsGoScanner {
             let client_without_timeout =
                 HTTP_CLIENT_REGEX.is_match(line) && !line.contains("Timeout:");
             if uses_default_client || client_without_timeout {
-                if let Some(ignore) = find_ignore(&ignores, i + 1, "http-timeouts-go") {
-                    log::info!(
-                        "Suppressed http-timeouts-go at {}:{}{}",
-                        file_path,
-                        i + 1,
-                        ignore
-                            .reason
-                            .as_ref()
-                            .map(|r| format!(" - {}", r))
-                            .unwrap_or_default()
-                    );
-                } else {
-                    issues.push(Issue {
-                        title: "HTTP Request Without Timeout".to_string(),
-                        description:
-                            "HTTP requests should set a timeout to avoid hanging indefinitely."
-                                .to_string(),
-                        file_path: file_path.to_string(),
-                        line_number: i + 1,
-                        severity: config.rules.http_timeouts_go.severity.clone(),
-                        suggested_fix: Some("Use an http.Client with a Timeout set.".to_string()),
-                        diff: Some(if uses_default_client {
-                            "-http.Get(url)\n+client := &http.Client{Timeout: 10 * time.Second}\n+client.Get(url)"
-                                .to_string()
-                        } else {
-                            format!(
-                                "-{}\n+&http.Client{{Timeout: 10 * time.Second}}",
-                                line.trim()
-                            )
-                        }),
-                    });
-                }
                 if let Some(ignore) = find_ignore(&ignores, i + 1, "http-timeouts-go") {
                     log::info!(
                         "Suppressed http-timeouts-go at {}:{}{}",
