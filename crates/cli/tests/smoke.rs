@@ -88,13 +88,7 @@ fn check_command_respects_path_argument() {
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
-        "check",
-        "--path",
-        repo_str,
-        "--base-ref",
-        "HEAD",
-        "--output",
-        output_str,
+        "check", "--path", repo_str, "--diff", "HEAD", "--output", output_str,
     ]);
 
     let output = cmd.output().expect("failed to execute command");
@@ -140,7 +134,7 @@ fn check_command_reports_issues_and_exit_code() {
     fs::write(repo.join("file.txt"), "api_key = \"ABCDEFGHIJKLMNOP\"\n").unwrap();
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
-    cmd.args(["check", "--path", repo_str, "--base-ref", "HEAD"]);
+    cmd.args(["check", "--path", repo_str, "--diff", "HEAD"]);
 
     cmd.assert().code(1);
 }
@@ -187,20 +181,14 @@ fn check_command_respects_fail_on_from_config() {
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
-        "--config",
-        config_str,
-        "check",
-        "--path",
-        repo_str,
-        "--base-ref",
-        "HEAD",
+        "--config", config_str, "check", "--path", repo_str, "--diff", "HEAD",
     ]);
 
     cmd.assert().code(0);
 }
 
 #[test]
-fn check_command_without_upstream_or_base_ref_errors() {
+fn check_command_without_upstream_or_diff_errors() {
     let temp = tempdir().unwrap();
     let repo = temp.path();
     let repo_str = repo.to_str().unwrap();
@@ -291,14 +279,7 @@ fn check_command_redacts_secrets_in_report() {
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
-        "--config",
-        config_str,
-        "check",
-        "--path",
-        repo_str,
-        "--base-ref",
-        "HEAD",
-        "--output",
+        "--config", config_str, "check", "--path", repo_str, "--diff", "HEAD", "--output",
         output_str,
     ]);
 

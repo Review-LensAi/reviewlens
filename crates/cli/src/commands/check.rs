@@ -11,13 +11,31 @@ use std::fs;
 use std::process::Command;
 
 use anyhow::Context;
+use std::str::FromStr;
+
+#[derive(Debug, Clone)]
+pub enum DiffTarget {
+    Auto,
+    Ref(String),
+}
+
+impl FromStr for DiffTarget {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            s if s.eq_ignore_ascii_case("auto") => Ok(DiffTarget::Auto),
+            other => Ok(DiffTarget::Ref(other.to_string())),
+        }
+    }
+}
 
 #[derive(Args, Debug)]
 pub struct CheckArgs {
-    /// The base reference to compare against for generating a diff.
-    /// If not provided, the upstream of the current branch is used.
-    #[arg(long, alias = "diff")]
-    pub base_ref: Option<String>,
+    /// The diff reference to compare against for generating a diff.
+    /// Use `auto` to detect the upstream of the current branch.
+    #[arg(long, alias = "base-ref", default_value = "auto")]
+    pub diff: DiffTarget,
 
     /// The path to the repository to check.
     #[arg(long, default_value = ".")]
@@ -69,30 +87,33 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
     log::info!("  Path: {}", args.path);
     log::info!("  Output: {}", args.output);
 
-    // Resolve the base reference, falling back to upstream if not provided.
-    let base_ref = if let Some(base) = args.base_ref.clone() {
-        base
-    } else {
-        let upstream_output = Command::new("git")
-            .args([
-                "-C",
-                &args.path,
-                "rev-parse",
-                "--abbrev-ref",
-                "--symbolic-full-name",
-                "@{u}",
-            ])
-            .output()
-            .map_err(|e| EngineError::Config(format!("failed to detect upstream base: {}", e)))?;
-        if !upstream_output.status.success() {
-            return Err(
-                EngineError::Config("failed to detect upstream base reference".into()).into(),
-            );
+    // Resolve the diff target, falling back to upstream if set to auto.
+    let base_ref = match &args.diff {
+        DiffTarget::Ref(base) => base.clone(),
+        DiffTarget::Auto => {
+            let upstream_output = Command::new("git")
+                .args([
+                    "-C",
+                    &args.path,
+                    "rev-parse",
+                    "--abbrev-ref",
+                    "--symbolic-full-name",
+                    "@{u}",
+                ])
+                .output()
+                .map_err(|e| {
+                    EngineError::Config(format!("failed to detect upstream base: {}", e))
+                })?;
+            if !upstream_output.status.success() {
+                return Err(
+                    EngineError::Config("failed to detect upstream base reference".into()).into(),
+                );
+            }
+            String::from_utf8(upstream_output.stdout)
+                .context("upstream output was not valid UTF-8")?
+                .trim()
+                .to_string()
         }
-        String::from_utf8(upstream_output.stdout)
-            .context("upstream output was not valid UTF-8")?
-            .trim()
-            .to_string()
     };
     log::info!("  Base ref: {}", base_ref);
 
