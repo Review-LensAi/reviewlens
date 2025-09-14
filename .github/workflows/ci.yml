@@ -28,9 +28,54 @@ jobs:
         run: |
           make eval | tee eval.log
           precision=$(grep '^Precision:' eval.log | awk '{print $2}')
-          runtime=$(grep '^Total runtime:' eval.log | awk '{print $3}')
+          fp_rate=$(grep '^FP Rate:' eval.log | awk '{print $3}')
+          runtime_p50=$(grep '^Runtime P50:' eval.log | awk '{print $3}' | sed 's/ms//')
+          runtime_p95=$(grep '^Runtime P95:' eval.log | awk '{print $3}' | sed 's/ms//')
+          memory_p95=$(grep '^Memory P95:' eval.log | awk '{print $3}' | sed 's/KB//')
           echo "precision=$precision" >> "$GITHUB_OUTPUT"
-          echo "runtime=$runtime" >> "$GITHUB_OUTPUT"
+          echo "fp_rate=$fp_rate" >> "$GITHUB_OUTPUT"
+          echo "runtime_p50=$runtime_p50" >> "$GITHUB_OUTPUT"
+          echo "runtime_p95=$runtime_p95" >> "$GITHUB_OUTPUT"
+          echo "memory_p95=$memory_p95" >> "$GITHUB_OUTPUT"
+
+      - name: Enforce evaluation gates
+        run: |
+          precision=${{ steps.eval.outputs.precision }}
+          fp_rate=${{ steps.eval.outputs.fp_rate }}
+          runtime_p50=${{ steps.eval.outputs.runtime_p50 }}
+          runtime_p95=${{ steps.eval.outputs.runtime_p95 }}
+          memory_p95=${{ steps.eval.outputs.memory_p95 }}
+          echo "Precision: $precision"
+          echo "FP Rate: $fp_rate"
+          echo "Runtime P50: ${runtime_p50}ms"
+          echo "Runtime P95: ${runtime_p95}ms"
+          echo "Memory P95: ${memory_p95}KB"
+          fail=0
+          if (( $(echo "$precision < 0.85" | bc -l) )); then
+            echo "Precision gate failed: $precision < 0.85"
+            fail=1
+          fi
+          if (( $(echo "$fp_rate > 0.15" | bc -l) )); then
+            echo "FP rate gate failed: $fp_rate > 0.15"
+            fail=1
+          fi
+          if (( runtime_p50 > 300000 )); then
+            echo "Runtime P50 gate failed: ${runtime_p50}ms > 300000ms"
+            fail=1
+          fi
+          if (( runtime_p95 > 480000 )); then
+            echo "Runtime P95 gate failed: ${runtime_p95}ms > 480000ms"
+            fail=1
+          fi
+          if (( memory_p95 > 1572864 )); then
+            echo "Memory P95 gate failed: ${memory_p95}KB > 1572864KB"
+            fail=1
+          fi
+          if (( fail )); then
+            echo "Evaluation gates failed"
+            exit 1
+          fi
+          echo "All evaluation gates passed"
 
       - name: Upload evaluation log
         uses: actions/upload-artifact@v4
@@ -42,4 +87,7 @@ jobs:
         run: |
           echo "### Evaluation Metrics" >> "$GITHUB_STEP_SUMMARY"
           echo "Precision: ${{ steps.eval.outputs.precision }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Total runtime: ${{ steps.eval.outputs.runtime }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "FP Rate: ${{ steps.eval.outputs.fp_rate }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Runtime P50: ${{ steps.eval.outputs.runtime_p50 }}ms" >> "$GITHUB_STEP_SUMMARY"
+          echo "Runtime P95: ${{ steps.eval.outputs.runtime_p95 }}ms" >> "$GITHUB_STEP_SUMMARY"
+          echo "Memory P95: ${{ steps.eval.outputs.memory_p95 }}KB" >> "$GITHUB_STEP_SUMMARY"
