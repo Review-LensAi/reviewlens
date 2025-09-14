@@ -31,6 +31,9 @@ pub struct CheckArgs {
     /// Defaults to the `fail-on` setting in `reviewlens.toml` (`low` if unset).
     #[arg(long, value_enum)]
     pub fail_on: Option<Severity>,
+    // Flags such as `--no-progress` and `--ci` used to appear twice in this
+    // structure, leading to compilation errors. They are intentionally omitted
+    // here so the top-level CLI can own those options without duplication.
 }
 
 /// Executes the `check` subcommand.

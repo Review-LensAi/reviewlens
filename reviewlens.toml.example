@@ -7,7 +7,7 @@
 # Optional configuration for a pre-built vector index used for
 # Retrieval-Augmented Generation.
 [index]
-path = ".reviewlens/index/index.json"
+path = ".reviewlens/index/index.json.zst"
 
 # Minimum issue severity that triggers a non-zero exit code.
 # Defaults to "low" if omitted.
