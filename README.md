@@ -58,8 +58,8 @@ cargo install reviewlens
 For a containerized environment, pull the pre-built image from GitHub's container registry.
 
 ```bash
-docker pull ghcr.io/some-org/reviewlens:latest
-docker run --rm -v "$(pwd):/work" ghcr.io/some-org/reviewlens:latest check --base-ref main
+docker pull ghcr.io/Review-LensAi/reviewlens:latest
+docker run --rm -v "$(pwd):/work" ghcr.io/Review-LensAi/reviewlens:latest check --base-ref main
 ```
 
 You can also build the image locally:
