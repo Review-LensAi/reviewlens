@@ -7,9 +7,8 @@ use regex::Regex;
 pub struct ServerXssGoScanner;
 
 static TEXT_TEMPLATE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)text/template").unwrap());
-static UNSAFE_WRITE_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r#"(?i)fmt\.Fprintf\s*\(\s*w,[^)]*\+"#).unwrap()
-});
+static UNSAFE_WRITE_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"(?i)fmt\.Fprintf\s*\(\s*w,[^)]*\+"#).unwrap());
 
 impl Scanner for ServerXssGoScanner {
     fn name(&self) -> &'static str {
@@ -36,7 +35,9 @@ impl Scanner for ServerXssGoScanner {
                     )),
                 });
             }
-            if UNSAFE_WRITE_REGEX.is_match(line) {
+            if UNSAFE_WRITE_REGEX.is_match(line)
+                || (line.contains("w.Write(") && line.contains("FormValue("))
+            {
                 issues.push(Issue {
                     title: "Unescaped user input written to ResponseWriter".to_string(),
                     description:
