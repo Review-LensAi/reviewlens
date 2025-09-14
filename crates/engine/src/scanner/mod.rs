@@ -78,10 +78,14 @@ impl Scanner for SqlInjectionGoScanner {
     }
 }
 
-static HTTP_DEFAULT_CLIENT_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new("(?i)http\\.(Get|Post|Head|Do)\\(").unwrap());
-static HTTP_CLIENT_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new("(?i)&?http\\.Client\\{[^}]*\\}").unwrap());
+static HTTP_DEFAULT_CLIENT_REGEX: Lazy<Regex> = Lazy::new(|| {
+    // Match http.Get/Post/Head/Do and http.DefaultClient.<method>
+    Regex::new("(?i)http\\.(?:DefaultClient\\.)?(Get|Post|Head|Do)\\(").unwrap()
+});
+static HTTP_CLIENT_REGEX: Lazy<Regex> = Lazy::new(|| {
+    // Match http.Client constructions, allowing newlines between fields
+    Regex::new("(?is)&?http\\.Client\\s*\\{[^}]*\\}").unwrap()
+});
 
 pub struct HttpTimeoutsGoScanner;
 impl Scanner for HttpTimeoutsGoScanner {
@@ -91,11 +95,9 @@ impl Scanner for HttpTimeoutsGoScanner {
 
     fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
+        // Detect usage of the default HTTP client.
         for (i, line) in content.lines().enumerate() {
-            let uses_default_client = HTTP_DEFAULT_CLIENT_REGEX.is_match(line);
-            let client_without_timeout =
-                HTTP_CLIENT_REGEX.is_match(line) && !line.contains("Timeout:");
-            if uses_default_client || client_without_timeout {
+            if HTTP_DEFAULT_CLIENT_REGEX.is_match(line) {
                 issues.push(Issue {
                     title: "HTTP Request Without Timeout".to_string(),
                     description:
@@ -105,15 +107,37 @@ impl Scanner for HttpTimeoutsGoScanner {
                     line_number: i + 1,
                     severity: config.rules.http_timeouts_go.severity.clone(),
                     suggested_fix: Some("Use an http.Client with a Timeout set.".to_string()),
-                    diff: Some(if uses_default_client {
+                    diff: Some(
                         "-http.Get(url)\n+client := &http.Client{Timeout: 10 * time.Second}\n+client.Get(url)"
-                            .to_string()
-                    } else {
-                        format!(
-                            "-{}\n+&http.Client{{Timeout: 10 * time.Second}}",
-                            line.trim()
-                        )
-                    }),
+                            .to_string(),
+                    ),
+                });
+            }
+        }
+
+        // Detect custom http.Client instances without a Timeout.
+        for mat in HTTP_CLIENT_REGEX.find_iter(content) {
+            let snippet = mat.as_str();
+            if !snippet.contains("Timeout:") {
+                let line_number = content[..mat.start()]
+                    .bytes()
+                    .filter(|&b| b == b'\n')
+                    .count()
+                    + 1;
+                let first_line = snippet.lines().next().unwrap_or("").trim();
+                issues.push(Issue {
+                    title: "HTTP Request Without Timeout".to_string(),
+                    description:
+                        "HTTP requests should set a timeout to avoid hanging indefinitely."
+                            .to_string(),
+                    file_path: file_path.to_string(),
+                    line_number,
+                    severity: config.rules.http_timeouts_go.severity.clone(),
+                    suggested_fix: Some("Use an http.Client with a Timeout set.".to_string()),
+                    diff: Some(format!(
+                        "-{}\n+&http.Client{{Timeout: 10 * time.Second}}",
+                        first_line
+                    )),
                 });
             }
         }
