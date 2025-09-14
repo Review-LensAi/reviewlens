@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 /// Default path for the RAG index file.
-pub const DEFAULT_INDEX_PATH: &str = ".reviewlens/index/index.json";
+pub const DEFAULT_INDEX_PATH: &str = ".reviewlens/index/index.json.zst";
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]

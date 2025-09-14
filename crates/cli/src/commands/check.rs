@@ -56,6 +56,10 @@ pub struct CheckArgs {
     #[arg(long, value_enum)]
     pub fail_on: Option<Severity>,
 
+    // Flags such as `--no-progress` and `--ci` used to appear twice in this
+    // structure, leading to compilation errors. They are intentionally omitted
+    // here so the top-level CLI can own those options without duplication.
+
     /// Suppress the progress bar output.
     #[arg(long, default_value_t = false)]
     pub no_progress: bool,
