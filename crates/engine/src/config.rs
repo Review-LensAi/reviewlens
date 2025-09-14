@@ -280,7 +280,7 @@ impl Default for RuleConfig {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct RulesConfig {
     #[serde(default)]
@@ -291,8 +291,27 @@ pub struct RulesConfig {
     pub http_timeouts_go: RuleConfig,
     #[serde(default)]
     pub convention_deviation: RuleConfig,
-    #[serde(default)]
+    #[serde(default = "default_disabled_rule")]
     pub server_xss_go: RuleConfig,
+}
+
+fn default_disabled_rule() -> RuleConfig {
+    RuleConfig {
+        enabled: false,
+        ..RuleConfig::default()
+    }
+}
+
+impl Default for RulesConfig {
+    fn default() -> Self {
+        Self {
+            secrets: RuleConfig::default(),
+            sql_injection_go: RuleConfig::default(),
+            http_timeouts_go: RuleConfig::default(),
+            convention_deviation: RuleConfig::default(),
+            server_xss_go: default_disabled_rule(),
+        }
+    }
 }
 
 impl Config {
