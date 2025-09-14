@@ -10,12 +10,10 @@ use crate::{
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Serialize;
-use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::{Mutex, Once};
 
 /// Represents an issue found by a scanner.
-#[derive(Debug, Clone, Serialize)]
 #[derive(Debug, Clone, Serialize)]
 pub struct Issue {
     pub title: String,
@@ -100,7 +98,6 @@ impl Scanner for SqlInjectionGoScanner {
     fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
         let ignores = parse_ignore_directives(content);
-        let ignores = parse_ignore_directives(content);
         for (i, line) in content.lines().enumerate() {
             for regex in &*SQL_INJECTION_PATTERNS {
                 if regex.is_match(line) {
@@ -169,7 +166,6 @@ impl Scanner for HttpTimeoutsGoScanner {
 
     fn scan(&self, file_path: &str, content: &str, config: &Config) -> Result<Vec<Issue>> {
         let mut issues = Vec::new();
-        let ignores = parse_ignore_directives(content);
         let ignores = parse_ignore_directives(content);
         for (i, line) in content.lines().enumerate() {
             let uses_default_client = HTTP_DEFAULT_CLIENT_REGEX.is_match(line);
@@ -273,10 +269,6 @@ fn register_builtin_scanners() {
 /// Returns all scanners enabled via configuration.
 pub fn load_enabled_scanners(config: &Config) -> Vec<Box<dyn Scanner>> {
     register_builtin_scanners();
-
-    if config.rules.server_xss_go.enabled {
-        register_scanner("server-xss-go", || Box::new(ServerXssGoScanner));
-    }
 
     let registry = REGISTRY.lock().unwrap();
     let mut scanners: Vec<Box<dyn Scanner>> = Vec::new();
