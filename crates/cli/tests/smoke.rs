@@ -1,7 +1,6 @@
 use assert_cmd::Command;
 use serde_json::Value;
 use std::fs;
-use std::path::Path;
 use std::process::Command as StdCommand;
 use tempfile::tempdir;
 
@@ -296,7 +295,8 @@ fn check_command_redacts_secrets_in_report() {
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
-        "--config", config_str, "check", "--path", repo_str, "--diff", "HEAD", "--output", output_str,
+        "--config", config_str, "check", "--path", repo_str, "--diff", "HEAD", "--output",
+        output_str,
     ]);
 
     let output = cmd.output().expect("failed to execute command");
@@ -354,6 +354,9 @@ fn check_command_generates_json_report_and_redacts_secrets() {
     let config_path = repo.join("reviewlens.toml");
     let config_str = config_path.to_str().unwrap();
 
+    let output_path = repo.join("review_report.json");
+    let output_str = output_path.to_str().unwrap();
+
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
         "--config",
@@ -372,9 +375,8 @@ fn check_command_generates_json_report_and_redacts_secrets() {
     let output = cmd.output().expect("failed to execute command");
     assert_eq!(output.status.code(), Some(1));
 
-    let report_path = Path::new("review_report.json");
-    assert!(report_path.exists());
-    let report = fs::read_to_string(report_path).unwrap();
+    assert!(output_path.exists());
+    let report = fs::read_to_string(output_path).unwrap();
     assert!(report.contains("[REDACTED]"));
     assert!(!report.contains("api_key"));
     assert!(!report.contains("ABCDEFGHIJKLMNOPQRSTUVWX"));
