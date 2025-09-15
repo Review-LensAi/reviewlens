@@ -42,10 +42,9 @@ Set `provider` and `api_key` to use a remote model. The default `provider = "nul
 ```toml
 [privacy.redaction]
 enabled = true
-patterns = ["(?i)api[_-]?key", "aws_secret_access_key", "token"]
+# patterns = ["(?i)api[_-]?key", "aws_secret_access_key", "token"]
 ```
-Secret redaction is enabled by default and ships with patterns for API keys, AWS secret access keys, and generic tokens.
-Extend the list by appending additional regular expressions:
+Secret redaction is enabled by default and ships with patterns for API keys, AWS secret access keys, and generic tokens. Omitting `patterns` keeps these built-in defaults. Extend the list by appending additional regular expressions:
 
 ```toml
 [privacy.redaction]
