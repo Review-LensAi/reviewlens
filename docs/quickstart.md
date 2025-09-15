@@ -36,6 +36,8 @@ Then run the agent from the root of your project:
 ```bash
 reviewlens check --base-ref main
 ```
+By default, only files changed relative to the base reference are analyzed. Pass
+`--no-only-changed` to review the entire repository.
 The CLI prints a short summary and the top hotspots to stdout, while the full report is written to `review_report.md`.
 
 When three or more files reference one another, the report also includes a Mermaid sequence diagram visualizing the flow between them.

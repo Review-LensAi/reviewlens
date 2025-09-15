@@ -35,8 +35,9 @@ pub struct CheckArgs {
     #[arg(long, default_value_t = false)]
     pub ci: bool,
 
-    /// Analyze only files changed relative to the diff base.
-    #[arg(long)]
+    /// Analyze only files changed relative to the diff base. Use `--no-only-changed`
+    /// to analyze all files.
+    #[arg(long, default_value_t = true)]
     pub only_changed: bool,
 
     /// Disable progress output.
