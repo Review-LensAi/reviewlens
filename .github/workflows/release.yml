@@ -128,7 +128,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }},ghcr.io/${{ github.repository }}:latest
+          tags: ghcr.io/review-lensai/reviewlens:${{ github.ref_name }},ghcr.io/review-lensai/reviewlens:latest
           platforms: linux/amd64,linux/arm64
 
       - name: Update Homebrew formula
