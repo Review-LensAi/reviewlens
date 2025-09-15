@@ -39,7 +39,9 @@ pub struct Config {
     pub privacy: PrivacyConfig,
     #[serde(default)]
     pub paths: PathsConfig,
-    /// Configuration for the pre-built vector index used for RAG.
+    #[serde(default)]
+    pub telemetry: TelemetryConfig,
+    /// Configuration for report generation.
     #[serde(default)]
     pub report: ReportConfig,
     /// Optional path to a pre-built vector index used for RAG.
@@ -186,6 +188,25 @@ impl Default for PathsConfig {
 
 fn default_include() -> Vec<String> {
     vec!["**/*".to_string()]
+}
+
+// Telemetry configuration
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct TelemetryConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
+}
+
+impl Default for TelemetryConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            file: None,
+        }
+    }
 }
 
 // As per PRD: `[report.hotspot_weights]` section
@@ -361,6 +382,7 @@ impl Default for Config {
             generation: GenerationConfig::default(),
             privacy: PrivacyConfig::default(),
             paths: PathsConfig::default(),
+            telemetry: TelemetryConfig::default(),
             index: Some(IndexConfig::default()),
             #[allow(deprecated)]
             index_path: None,

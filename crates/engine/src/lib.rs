@@ -17,6 +17,7 @@ pub mod llm;
 pub mod rag;
 pub mod report;
 pub mod scanner;
+pub mod telemetry;
 
 use crate::config::{Config, Provider};
 use crate::error::{EngineError, Result};
@@ -24,6 +25,7 @@ use crate::llm::{create_llm_provider, LlmProvider};
 use crate::rag::{InMemoryVectorStore, RagContextRetriever, VectorStore};
 use crate::report::{ReviewReport, RuntimeMetadata, TimingInfo};
 use crate::scanner::{Issue, Scanner};
+use crate::telemetry::Telemetry;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use regex::Regex;
 use std::collections::HashMap;
@@ -98,6 +100,7 @@ pub struct ReviewEngine {
     config: Config,
     scanners: Vec<Box<dyn Scanner>>,
     llm: Box<dyn LlmProvider>,
+    telemetry: Option<Telemetry>,
 }
 
 impl ReviewEngine {
@@ -105,10 +108,12 @@ impl ReviewEngine {
     pub fn new(config: Config) -> Result<Self> {
         let llm = create_llm_provider(&config)?;
         let scanners = crate::scanner::load_enabled_scanners(&config);
+        let telemetry = Telemetry::from_config(&config.telemetry)?;
         Ok(Self {
             config,
             scanners,
             llm,
+            telemetry,
         })
     }
 
@@ -122,6 +127,9 @@ impl ReviewEngine {
         log::info!("Engine running with config: {:?}", self.config);
         log::debug!("Analyzing diff: {}", diff);
         let start_time = Instant::now();
+        if let Some(t) = &self.telemetry {
+            t.run_started();
+        }
 
         let mut total_tokens_used: u32 = 0;
 
@@ -193,6 +201,11 @@ impl ReviewEngine {
                         ));
                     }
                 } else {
+                    if let Some(t) = &self.telemetry {
+                        for issue in &found {
+                            t.finding(&issue.file_path, issue.line_number, &issue.title);
+                        }
+                    }
                     issues.append(&mut found);
                 }
             }
@@ -344,6 +357,7 @@ impl ReviewEngine {
 
         // 8. Build and return the ReviewReport.
         let elapsed_ms = start_time.elapsed().as_millis();
+        let issue_count = issues.len();
         let metadata = RuntimeMetadata {
             ruleset_version: RULESET_VERSION.to_string(),
             model: self.config.llm.model.clone(),
@@ -364,6 +378,9 @@ impl ReviewEngine {
             config: self.config.clone(),
             metadata,
         };
+        if let Some(t) = &self.telemetry {
+            t.run_finished(issue_count, elapsed_ms);
+        }
 
         Ok(report)
     }

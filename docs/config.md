@@ -77,6 +77,15 @@ churn = 1
 ```
 Higher `severity` favors files with more findings, while `churn` boosts files with more changed lines.
 
+## Telemetry
+Emit run telemetry as newline-delimited JSON:
+```toml
+[telemetry]
+enabled = true
+# file = "telemetry.jsonl" # defaults to stdout
+```
+When enabled, the engine writes `run_started`, `finding`, and `run_finished` events without recording source code.
+
 ## Using in CI
 Supply sensitive values such as API keys via environment variables in your CI system. Example GitHub Actions and GitLab CI files live in [`docs/ci/`](ci/).
 
