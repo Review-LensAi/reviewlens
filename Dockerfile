@@ -1,6 +1,6 @@
 # --- Stage 1: Build the binary ---
 # We use a specific version of Rust to ensure builds are reproducible.
-FROM rust:1.82 as builder
+FROM rust:1.82 AS builder
 
 WORKDIR /app
 
