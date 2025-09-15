@@ -80,6 +80,8 @@ pub fn find_ignore<'a>(map: &'a IgnoreMap, line: usize, rule: &str) -> Option<&'
 
 pub mod secrets;
 pub use secrets::SecretsScanner;
+pub mod conventions;
+pub use conventions::ConventionsScanner;
 
 static SQL_INJECTION_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
@@ -209,6 +211,7 @@ fn register_builtin_scanners() {
         register_scanner("secrets", || Box::new(SecretsScanner));
         register_scanner("sql-injection-go", || Box::new(SqlInjectionGoScanner));
         register_scanner("http-timeouts-go", || Box::new(HttpTimeoutsGoScanner));
+        register_scanner("conventions", || Box::new(ConventionsScanner::default()));
     });
 }
 
@@ -231,6 +234,11 @@ pub fn load_enabled_scanners(config: &Config) -> Vec<Box<dyn Scanner>> {
     }
     if config.rules.http_timeouts_go.enabled {
         if let Some(factory) = registry.get("http-timeouts-go") {
+            scanners.push(factory());
+        }
+    }
+    if config.rules.conventions.enabled {
+        if let Some(factory) = registry.get("conventions") {
             scanners.push(factory());
         }
     }

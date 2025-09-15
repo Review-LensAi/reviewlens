@@ -289,6 +289,8 @@ pub struct RulesConfig {
     pub sql_injection_go: RuleConfig,
     #[serde(default = "default_http_timeouts_go_rule")]
     pub http_timeouts_go: RuleConfig,
+    #[serde(default = "default_conventions_rule")]
+    pub conventions: RuleConfig,
 }
 
 fn default_secrets_rule() -> RuleConfig {
@@ -312,12 +314,20 @@ fn default_http_timeouts_go_rule() -> RuleConfig {
     }
 }
 
+fn default_conventions_rule() -> RuleConfig {
+    RuleConfig {
+        enabled: true,
+        severity: Severity::Low,
+    }
+}
+
 impl Default for RulesConfig {
     fn default() -> Self {
         Self {
             secrets: default_secrets_rule(),
             sql_injection_go: default_sql_injection_go_rule(),
             http_timeouts_go: default_http_timeouts_go_rule(),
+            conventions: default_conventions_rule(),
         }
     }
 }

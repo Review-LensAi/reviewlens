@@ -75,3 +75,8 @@ severity = "critical"
 [rules.http-timeouts-go]
 enabled = true
 severity = "medium"
+
+# Flags deviations from repository logging and error-handling conventions.
+[rules.conventions]
+enabled = true
+severity = "low"

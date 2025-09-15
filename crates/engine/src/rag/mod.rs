@@ -201,6 +201,16 @@ impl InMemoryVectorStore {
     pub fn len(&self) -> usize {
         self.documents.len()
     }
+
+    /// Returns an immutable slice of the indexed documents.
+    pub fn documents(&self) -> &[Document] {
+        &self.documents
+    }
+
+    /// Adds a document to the store without computing embeddings. Useful for tests.
+    pub fn push_document(&mut self, document: Document) {
+        self.documents.push(document);
+    }
 }
 
 #[async_trait]
@@ -232,8 +242,8 @@ impl InMemoryVectorStore {
     pub fn save_to_disk<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let data = serde_json::to_vec(&self)
             .map_err(|e| EngineError::Rag(format!("Failed to serialize store: {e}")))?;
-        let compressed =
-            zstd::encode_all(&data[..], 0).map_err(|e| EngineError::Rag(format!("Failed to compress store: {e}")))?;
+        let compressed = zstd::encode_all(&data[..], 0)
+            .map_err(|e| EngineError::Rag(format!("Failed to compress store: {e}")))?;
         fs::write(path, compressed)?;
         Ok(())
     }
