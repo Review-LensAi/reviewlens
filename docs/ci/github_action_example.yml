@@ -40,12 +40,11 @@ jobs:
     - name: Index repository (outputs .reviewlens/index/index.json.zst by default)
       run: ./target/release/reviewlens index --path .
 
-    - name: Run code review
+    - name: Run code review and post results
       id: code-review
       run: |
-        # Use the PR's base branch as the diff target
         BASE_BRANCH="origin/${{ github.base_ref }}"
-        ./target/release/reviewlens check --base-ref $BASE_BRANCH --output review_report.md
+        python scripts/ci_helper.py --diff $BASE_BRANCH --allow-suggest
       # Continue even if the check fails, so we can upload the report
       continue-on-error: true
 
@@ -53,7 +52,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: review-report
-        path: review_report.md
+        path: review_report.json
 
     - name: Check for review issues
       if: steps.code-review.outcome == 'failure'

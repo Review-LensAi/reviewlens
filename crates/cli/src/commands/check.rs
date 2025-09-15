@@ -44,6 +44,10 @@ pub struct CheckArgs {
     #[arg(long, default_value_t = false)]
     pub no_progress: bool,
 
+    /// Allow posting diff suggestions via the CI helper.
+    #[arg(long, default_value_t = false)]
+    pub allow_suggest: bool,
+
     /// The path to the repository to check.
     #[arg(long, default_value = ".")]
     pub path: String,
@@ -102,6 +106,7 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
     log::info!("  CI mode: {}", args.ci);
     log::info!("  Only changed: {}", args.only_changed);
     log::info!("  No progress: {}", args.no_progress);
+    log::info!("  Allow suggest: {}", args.allow_suggest);
 
     if args.ci {
         env::set_var("CI", "true");
