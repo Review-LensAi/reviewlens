@@ -353,6 +353,8 @@ fn check_command_generates_json_report_and_redacts_secrets() {
     .unwrap();
     let config_path = repo.join("reviewlens.toml");
     let config_str = config_path.to_str().unwrap();
+    let output_path = repo.join("review_report.json");
+    let output_str = output_path.to_str().unwrap();
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
@@ -371,10 +373,9 @@ fn check_command_generates_json_report_and_redacts_secrets() {
 
     let output = cmd.output().expect("failed to execute command");
     assert_eq!(output.status.code(), Some(1));
+    assert!(output_path.exists());
 
-    let report_path = Path::new("review_report.json");
-    assert!(report_path.exists());
-    let report = fs::read_to_string(report_path).unwrap();
+    let report = fs::read_to_string(output_path).unwrap();
     assert!(report.contains("[REDACTED]"));
     assert!(!report.contains("api_key"));
     assert!(!report.contains("ABCDEFGHIJKLMNOPQRSTUVWX"));
