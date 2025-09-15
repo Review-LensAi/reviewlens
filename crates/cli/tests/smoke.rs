@@ -373,8 +373,8 @@ fn check_command_generates_json_report_and_redacts_secrets() {
         "HEAD",
         "--fail-on",
         "low",
-        "--output",
-        output_str,
+        "--format",
+        "json",
     ]);
 
     let output = cmd.output().expect("failed to execute command");
