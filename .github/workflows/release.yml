@@ -37,7 +37,8 @@ jobs:
 
       - name: Install cargo-audit and cargo-deny
         run: |
-          cargo install --locked cargo-audit cargo-deny
+          cargo install --locked cargo-audit
+          cargo install --locked cargo-deny --version 0.17.0
 
       - name: Build binary
         run: cargo build --release --bin reviewlens --target ${{ matrix.target }}
