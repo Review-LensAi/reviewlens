@@ -1,7 +1,7 @@
 //! The `check` subcommand.
 
 use clap::{Args, ValueEnum};
-use engine::config::Severity;
+use engine::config::{Provider, Severity};
 use engine::error::EngineError;
 use engine::redact_text;
 use engine::report::{JsonGenerator, MarkdownGenerator, ReportGenerator};
@@ -60,29 +60,76 @@ pub struct CheckArgs {
 /// Executes the `check` subcommand.
 /// Returns the appropriate exit code.
 pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> i32 {
-    match execute(args, engine).await {
-        Ok(issues_found) => {
-            if issues_found {
-                1
-            } else {
-                0
-            }
+    if args.ci {
+        let mut config = engine.config().clone();
+        if config.generation.temperature != Some(0.0) {
+            log::warn!(
+                "CI mode overrides generation temperature to 0.0 (was {:?})",
+                config.generation.temperature
+            );
         }
-        Err(e) => {
-            if let Some(engine_error) = e.downcast_ref::<EngineError>() {
-                match engine_error {
-                    EngineError::Config(_) => {
-                        log::error!("{}", e);
-                        2
+        config.generation.temperature = Some(0.0);
+        if config.llm.provider != Provider::Null && config.llm.model.is_none() {
+            log::error!("CI mode requires [llm].model to be set when provider is not 'null'");
+            return 2;
+        }
+        match ReviewEngine::new(config) {
+            Ok(ci_engine) => match execute(args, &ci_engine).await {
+                Ok(issues_found) => {
+                    if issues_found {
+                        1
+                    } else {
+                        0
                     }
-                    _ => {
+                }
+                Err(e) => {
+                    if let Some(engine_error) = e.downcast_ref::<EngineError>() {
+                        match engine_error {
+                            EngineError::Config(_) => {
+                                log::error!("{}", e);
+                                2
+                            }
+                            _ => {
+                                log::error!("{}", e);
+                                3
+                            }
+                        }
+                    } else {
                         log::error!("{}", e);
                         3
                     }
                 }
-            } else {
+            },
+            Err(e) => {
                 log::error!("{}", e);
-                3
+                2
+            }
+        }
+    } else {
+        match execute(args, engine).await {
+            Ok(issues_found) => {
+                if issues_found {
+                    1
+                } else {
+                    0
+                }
+            }
+            Err(e) => {
+                if let Some(engine_error) = e.downcast_ref::<EngineError>() {
+                    match engine_error {
+                        EngineError::Config(_) => {
+                            log::error!("{}", e);
+                            2
+                        }
+                        _ => {
+                            log::error!("{}", e);
+                            3
+                        }
+                    }
+                } else {
+                    log::error!("{}", e);
+                    3
+                }
             }
         }
     }
