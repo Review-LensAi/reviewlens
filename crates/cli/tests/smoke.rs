@@ -1,7 +1,6 @@
 use assert_cmd::Command;
 use serde_json::Value;
 use std::fs;
-use std::path::Path;
 use std::process::Command as StdCommand;
 use tempfile::tempdir;
 
@@ -296,7 +295,8 @@ fn check_command_redacts_secrets_in_report() {
 
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
-        "--config", config_str, "check", "--path", repo_str, "--diff", "HEAD", "--output", output_str,
+        "--config", config_str, "check", "--path", repo_str, "--diff", "HEAD", "--output",
+        output_str,
     ]);
 
     let output = cmd.output().expect("failed to execute command");

@@ -1,5 +1,6 @@
 use engine::config::Config;
-use engine::scanner::{Scanner, SecretsScanner};
+use engine::rag::{Document, InMemoryVectorStore};
+use engine::scanner::{ConventionsScanner, Scanner, SecretsScanner};
 
 #[test]
 fn secrets_scanner_detects_api_key() {
@@ -17,6 +18,35 @@ fn secrets_scanner_detects_api_key() {
     assert_eq!(issue.file_path, "config.js");
     assert_eq!(issue.line_number, 2);
     assert_eq!(issue.severity, config.rules.secrets.severity);
+}
+
+#[test]
+fn conventions_scanner_detects_deviation() {
+    let mut store = InMemoryVectorStore::default();
+    store.push_document(Document {
+        filename: "lib.rs".into(),
+        content: String::new(),
+        embedding: vec![],
+        function_signatures: vec![],
+        log_patterns: vec!["log::info!(\"hi\")".into()],
+        error_snippets: vec!["Result<()>".into()],
+        modified: 0,
+    });
+    let dir = tempfile::tempdir().unwrap();
+    let index_path = dir.path().join("index.json.zst");
+    store.save_to_disk(&index_path).unwrap();
+
+    let mut config = Config::default();
+    config.index = Some(engine::config::IndexConfig {
+        path: index_path.to_string_lossy().into(),
+    });
+
+    let scanner = ConventionsScanner::default();
+    let content = "fn main() { println!(\"hi\"); let _ = foo().unwrap(); }";
+    let issues = scanner
+        .scan("src/main.rs", content, &config)
+        .expect("scan should work");
+    assert_eq!(issues.len(), 2);
 }
 
 #[test]

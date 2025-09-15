@@ -1,7 +1,7 @@
 //! The `check` subcommand.
 
 use clap::{Args, ValueEnum};
-use engine::config::Severity;
+use engine::config::{Provider, Severity};
 use engine::error::EngineError;
 use engine::redact_text;
 use engine::report::{JsonGenerator, MarkdownGenerator, ReportGenerator};
@@ -35,13 +35,18 @@ pub struct CheckArgs {
     #[arg(long, default_value_t = false)]
     pub ci: bool,
 
-    /// Analyze only files changed relative to the diff base.
-    #[arg(long)]
+    /// Analyze only files changed relative to the diff base. Use `--no-only-changed`
+    /// to analyze all files.
+    #[arg(long, default_value_t = true)]
     pub only_changed: bool,
 
     /// Disable progress output.
     #[arg(long, default_value_t = false)]
     pub no_progress: bool,
+
+    /// Allow posting diff suggestions via the CI helper.
+    #[arg(long, default_value_t = false)]
+    pub allow_suggest: bool,
 
     /// The path to the repository to check.
     #[arg(long, default_value = ".")]
@@ -60,29 +65,76 @@ pub struct CheckArgs {
 /// Executes the `check` subcommand.
 /// Returns the appropriate exit code.
 pub async fn run(args: CheckArgs, engine: &ReviewEngine) -> i32 {
-    match execute(args, engine).await {
-        Ok(issues_found) => {
-            if issues_found {
-                1
-            } else {
-                0
-            }
+    if args.ci {
+        let mut config = engine.config().clone();
+        if config.generation.temperature != Some(0.0) {
+            log::warn!(
+                "CI mode overrides generation temperature to 0.0 (was {:?})",
+                config.generation.temperature
+            );
         }
-        Err(e) => {
-            if let Some(engine_error) = e.downcast_ref::<EngineError>() {
-                match engine_error {
-                    EngineError::Config(_) => {
-                        log::error!("{}", e);
-                        2
+        config.generation.temperature = Some(0.0);
+        if config.llm.provider != Provider::Null && config.llm.model.is_none() {
+            log::error!("CI mode requires [llm].model to be set when provider is not 'null'");
+            return 2;
+        }
+        match ReviewEngine::new(config) {
+            Ok(ci_engine) => match execute(args, &ci_engine).await {
+                Ok(issues_found) => {
+                    if issues_found {
+                        1
+                    } else {
+                        0
                     }
-                    _ => {
+                }
+                Err(e) => {
+                    if let Some(engine_error) = e.downcast_ref::<EngineError>() {
+                        match engine_error {
+                            EngineError::Config(_) => {
+                                log::error!("{}", e);
+                                2
+                            }
+                            _ => {
+                                log::error!("{}", e);
+                                3
+                            }
+                        }
+                    } else {
                         log::error!("{}", e);
                         3
                     }
                 }
-            } else {
+            },
+            Err(e) => {
                 log::error!("{}", e);
-                3
+                2
+            }
+        }
+    } else {
+        match execute(args, engine).await {
+            Ok(issues_found) => {
+                if issues_found {
+                    1
+                } else {
+                    0
+                }
+            }
+            Err(e) => {
+                if let Some(engine_error) = e.downcast_ref::<EngineError>() {
+                    match engine_error {
+                        EngineError::Config(_) => {
+                            log::error!("{}", e);
+                            2
+                        }
+                        _ => {
+                            log::error!("{}", e);
+                            3
+                        }
+                    }
+                } else {
+                    log::error!("{}", e);
+                    3
+                }
             }
         }
     }
@@ -101,6 +153,7 @@ async fn execute(args: CheckArgs, engine: &ReviewEngine) -> anyhow::Result<bool>
     log::info!("  CI mode: {}", args.ci);
     log::info!("  Only changed: {}", args.only_changed);
     log::info!("  No progress: {}", args.no_progress);
+    log::info!("  Allow suggest: {}", args.allow_suggest);
 
     if args.ci {
         env::set_var("CI", "true");

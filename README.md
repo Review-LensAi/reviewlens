@@ -149,6 +149,8 @@ Run a review from the root of your project:
 # Run a review against the 'main' branch
 reviewlens check --base-ref main
 ```
+By default, only files changed relative to the base reference are analyzed. Use
+`--no-only-changed` to review the entire repository.
 
 By default, the command exits with a non-zero status if any issue of severity
 `high` or higher is found. Use `--fail-on <severity>` or set `fail-on` in

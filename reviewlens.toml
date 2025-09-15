@@ -63,3 +63,7 @@ severity = "critical"
 enabled = true
 severity = "medium"
 
+[rules.conventions]
+enabled = true
+severity = "low"
+
