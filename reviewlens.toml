@@ -9,7 +9,7 @@ path = ".reviewlens/index/index.json.zst"
 
 [paths]
 # Paths to include (allow) in the analysis. Globs are supported.
-allow = ["src/**/*.rs", "crates/**/*.rs"]
+allow = ["src/**/*.rs", "crates/**/*.rs", "**/*.go"]
 
 # Paths to exclude (deny) from the analysis.
 deny = ["target/*", "**/testdata/*"]

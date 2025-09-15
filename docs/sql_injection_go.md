@@ -8,10 +8,12 @@ Use parameterized queries or prepared statements with the `database/sql` package
 
 ## Configuration
 
+Make sure Go files are included in the path allowlist (for example, `**/*.go`).
+
 ```toml
 [rules.sql-injection-go]
 enabled = true
-severity = "medium"
+severity = "critical"
 ```
 
 ## Suppression
