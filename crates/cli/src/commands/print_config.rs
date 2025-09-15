@@ -54,5 +54,8 @@ pub fn run(args: PrintConfigArgs, config: &Config) -> anyhow::Result<()> {
         .map(|p| p.as_str().to_string())
         .collect::<Vec<_>>();
     log::info!("Compiled providers: {}", providers.join(", "));
+    log::info!(
+        "CI mode ('check --ci') forces generation.temperature=0.0 and requires an LLM model when the provider isn't 'null'"
+    );
     Ok(())
 }

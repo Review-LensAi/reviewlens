@@ -79,3 +79,5 @@ Higher `severity` favors files with more findings, while `churn` boosts files wi
 
 ## Using in CI
 Supply sensitive values such as API keys via environment variables in your CI system. Example GitHub Actions and GitLab CI files live in [`docs/ci/`](ci/).
+
+When running `check --ci`, the CLI assumes a fully deterministic setup: it forces `[generation].temperature` to `0.0` and requires `[llm].model` to be set whenever `[llm].provider` is not `"null"`.
