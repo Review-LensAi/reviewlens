@@ -1,5 +1,6 @@
 //! The command-line interface for the Intelligent Code Review Agent.
 
+use chrono::Utc;
 use clap::Parser;
 use engine::{
     config::{Config, IndexConfig, Provider},
@@ -7,6 +8,7 @@ use engine::{
 };
 use env_logger::Target;
 use log::LevelFilter;
+use serde_json::json;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -94,6 +96,8 @@ enum Commands {
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
+    let ci_logs = matches!(&cli.command, Commands::Check(args) if args.ci);
+
     let mut builder =
         env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"));
     builder.filter_level(match cli.verbose {
@@ -106,7 +110,20 @@ async fn main() -> anyhow::Result<()> {
         builder.filter_level(LevelFilter::Info);
     }
     builder.target(Target::Stdout);
-    builder.format(|f, record| writeln!(f, "{}", record.args()));
+    if ci_logs {
+        builder.format(|f, record| {
+            let ts = Utc::now().to_rfc3339();
+            let log = json!({
+                "level": record.level().to_string(),
+                "msg": record.args().to_string(),
+                "module": record.module_path().unwrap_or_default(),
+                "ts": ts,
+            });
+            writeln!(f, "{}", log)
+        });
+    } else {
+        builder.format(|f, record| writeln!(f, "{}", record.args()));
+    }
     builder.init();
 
     if let Commands::Version(args) = &cli.command {
