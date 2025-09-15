@@ -356,12 +356,6 @@ fn check_command_generates_json_report_and_redacts_secrets() {
     let output_path = repo.join("review_report.json");
     let output_str = output_path.to_str().unwrap();
 
-    let output_path = repo.join("review_report.json");
-    let output_str = output_path.to_str().unwrap();
-
-    let output_path = repo.join("review_report.json");
-    let output_str = output_path.to_str().unwrap();
-
     let mut cmd = Command::cargo_bin("reviewlens").unwrap();
     cmd.args([
         "--config",
@@ -373,8 +367,8 @@ fn check_command_generates_json_report_and_redacts_secrets() {
         "HEAD",
         "--fail-on",
         "low",
-        "--format",
-        "json",
+        "--output",
+        output_str,
     ]);
 
     let output = cmd.output().expect("failed to execute command");

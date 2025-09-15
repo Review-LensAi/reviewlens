@@ -8,6 +8,8 @@ Always specify a timeout on HTTP clients or requests to avoid hanging connection
 
 ## Configuration
 
+Ensure Go files are included in the path allowlist (for example, `**/*.go`).
+
 ```toml
 [rules.http-timeouts-go]
 enabled = true
