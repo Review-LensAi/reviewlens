@@ -3,6 +3,7 @@
 use clap::Parser;
 use engine::{
     config::{Config, IndexConfig, Provider},
+    error::EngineError,
     ReviewEngine,
 };
 use env_logger::Target;
@@ -171,7 +172,16 @@ async fn main() -> anyhow::Result<()> {
         return commands::print_config::run(args.clone(), &config);
     }
 
-    let engine = ReviewEngine::new(config)?;
+    let engine = match ReviewEngine::new(config) {
+        Ok(engine) => engine,
+        Err(e) => {
+            log::error!("{}", e);
+            match e {
+                EngineError::Config(_) => std::process::exit(2),
+                _ => std::process::exit(3),
+            }
+        }
+    };
 
     // Execute the subcommand
     match cli.command {
