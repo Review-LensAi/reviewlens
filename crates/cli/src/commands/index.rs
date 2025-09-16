@@ -1,9 +1,8 @@
 //! The `index` subcommand.
 
 use clap::Args;
-use engine::config::DEFAULT_INDEX_PATH;
+use engine::config::{Config, DEFAULT_INDEX_PATH};
 use engine::rag::index_repository;
-use engine::ReviewEngine;
 
 #[derive(Args, Debug)]
 pub struct IndexArgs {
@@ -21,14 +20,13 @@ pub struct IndexArgs {
 }
 
 /// Executes the `index` subcommand.
-pub async fn run(args: IndexArgs, engine: &ReviewEngine) -> anyhow::Result<()> {
+pub async fn run(args: IndexArgs, config: &Config) -> anyhow::Result<()> {
     log::info!("Running 'index' with the following arguments:");
     log::info!("  Path: {}", args.path);
     log::info!("  Force: {}", args.force);
     log::info!("  Output: {}", args.output);
 
-    // Build (or load) the index using the engine's repository indexer.
-    let config = engine.config();
+    // Build (or load) the index using the repository indexer and CLI configuration.
     let store = index_repository(
         &args.path,
         &args.output,

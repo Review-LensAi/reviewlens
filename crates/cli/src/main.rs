@@ -183,33 +183,27 @@ async fn main() -> anyhow::Result<()> {
         config.privacy.redaction.patterns = cli.privacy_redaction_patterns.clone();
     }
 
-    // The `print-config` command does not need the engine, so we handle it
-    // before initializing the engine.
-    if let Commands::PrintConfig(args) = &cli.command {
-        return commands::print_config::run(args.clone(), &config);
-    }
-
-    let engine = match ReviewEngine::new(config) {
-        Ok(engine) => engine,
-        Err(e) => {
-            log::error!("{}", e);
-            match e {
-                EngineError::Config(_) => std::process::exit(2),
-                _ => std::process::exit(3),
-            }
-        }
-    };
-
-    // Execute the subcommand
     match cli.command {
         Commands::Check(args) => {
+            let engine = match ReviewEngine::new(config) {
+                Ok(engine) => engine,
+                Err(e) => {
+                    log::error!("{}", e);
+                    match e {
+                        EngineError::Config(_) => std::process::exit(2),
+                        _ => std::process::exit(3),
+                    }
+                }
+            };
+
             let code = commands::check::run(args, &engine).await;
             std::process::exit(code);
         }
-        Commands::Index(args) => commands::index::run(args, &engine).await?,
-        Commands::PrintConfig(_) => {
-            // This case is handled above, but the compiler needs it to be exhaustive.
-            unreachable!()
+        Commands::Index(args) => {
+            commands::index::run(args, &config).await?;
+        }
+        Commands::PrintConfig(args) => {
+            commands::print_config::run(args, &config)?;
         }
         Commands::Version(_) => {
             // This case is handled above, but the compiler needs it to be exhaustive.
