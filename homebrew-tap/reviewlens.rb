@@ -1,7 +1,7 @@
 class ReviewLens < Formula
   desc "CLI for the Intelligent Code Review Agent"
   homepage "https://github.com/Review-LensAi/reviewlens"
-  version "1.0.0"
+  version "1.0.1"
 
   # The sha256 placeholders below are updated by
   # scripts/update-homebrew-formula.py during release.
