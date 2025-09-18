@@ -140,15 +140,62 @@ jobs:
           SHA_LINUX_ARM64=$(cat release-assets/reviewlens-aarch64-unknown-linux-gnu.tar.gz.sha256)
           SHA_MAC_AMD64=$(cat release-assets/reviewlens-x86_64-apple-darwin.tar.gz.sha256)
           SHA_MAC_ARM64=$(cat release-assets/reviewlens-aarch64-apple-darwin.tar.gz.sha256)
-          sed -i "s/version \".*\"/version \"${VERSION#v}\"/" homebrew-tap/reviewlens.rb
-          sed -i "s/<X86_64_LINUX_SHA256>/${SHA_LINUX_AMD64}/" homebrew-tap/reviewlens.rb
-          sed -i "s/<ARM64_LINUX_SHA256>/${SHA_LINUX_ARM64}/" homebrew-tap/reviewlens.rb
-          sed -i "s/<X86_64_MAC_SHA256>/${SHA_MAC_AMD64}/" homebrew-tap/reviewlens.rb
-          sed -i "s/<ARM64_MAC_SHA256>/${SHA_MAC_ARM64}/" homebrew-tap/reviewlens.rb
-          if grep -E '<[A-Z0-9_]+_SHA256>' homebrew-tap/reviewlens.rb; then
-            echo "Error: placeholder SHA256 values remain" >&2
-            exit 1
-          fi
+          python - <<'PY'
+import os
+from pathlib import Path
+
+formula = Path("homebrew-tap/reviewlens.rb")
+version = os.environ["VERSION"].lstrip("v")
+
+targets = {
+    "aarch64-apple-darwin": os.environ["SHA_MAC_ARM64"],
+    "x86_64-apple-darwin": os.environ["SHA_MAC_AMD64"],
+    "aarch64-unknown-linux-gnu": os.environ["SHA_LINUX_ARM64"],
+    "x86_64-unknown-linux-gnu": os.environ["SHA_LINUX_AMD64"],
+}
+
+lines = formula.read_text().splitlines()
+updated_lines = []
+i = 0
+while i < len(lines):
+    line = lines[i]
+    stripped = line.strip()
+
+    if stripped.startswith("version "):
+        indent = line[: len(line) - len(stripped)]
+        updated_lines.append(f'{indent}version "{version}"')
+        i += 1
+        continue
+
+    if 'url "https://github.com/Review-LensAi/reviewlens/releases/download/v\\#{version}/reviewlens-' in line:
+        updated_lines.append(line)
+        i += 1
+        if i >= len(lines):
+            raise SystemExit("Expected sha256 line after url")
+        sha_line = lines[i]
+        sha_stripped = sha_line.strip()
+        if not sha_stripped.startswith("sha256 "):
+            raise SystemExit("Expected sha256 line after url")
+
+        replaced = False
+        for target, checksum in targets.items():
+            if f"reviewlens-{target}.tar.gz" in line:
+                indent = sha_line[: len(sha_line) - len(sha_stripped)]
+                updated_lines.append(f'{indent}sha256 "{checksum}"')
+                replaced = True
+                break
+
+        if not replaced:
+            raise SystemExit(f"No checksum provided for url: {line}")
+
+        i += 1
+        continue
+
+    updated_lines.append(line)
+    i += 1
+
+formula.write_text("\n".join(updated_lines) + "\n")
+PY
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add homebrew-tap/reviewlens.rb
